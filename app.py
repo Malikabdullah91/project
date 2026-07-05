@@ -60,7 +60,14 @@ if CORS_AVAILABLE:
 # =====================
 # DATABASE
 # =====================
-app.config['SQLALCHEMY_DATABASE_URI'] = 'mysql+pymysql://root:@localhost/skripsi_emas'
+# Otomatis pakai kredensial Railway saat di-deploy (MYSQLUSER, MYSQLPASSWORD, dll),
+# tapi tetap fallback ke localhost kalau dijalankan di komputer sendiri (tidak ada perubahan saat run lokal).
+db_user = os.environ.get('MYSQLUSER', 'root')
+db_pass = os.environ.get('MYSQLPASSWORD', '')
+db_host = os.environ.get('MYSQLHOST', 'localhost')
+db_port = os.environ.get('MYSQLPORT', '3306')
+db_name = os.environ.get('MYSQLDATABASE', 'skripsi_emas')
+app.config['SQLALCHEMY_DATABASE_URI'] = f'mysql+pymysql://{db_user}:{db_pass}@{db_host}:{db_port}/{db_name}'
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 db = SQLAlchemy(app)
 
