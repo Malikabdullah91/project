@@ -67,6 +67,7 @@ db_pass = os.environ.get('MYSQLPASSWORD', '')
 db_host = os.environ.get('MYSQLHOST', 'localhost')
 db_port = os.environ.get('MYSQLPORT', '3306')
 db_name = os.environ.get('MYSQLDATABASE', 'skripsi_emas')
+
 app.config['SQLALCHEMY_DATABASE_URI'] = f'mysql+pymysql://{db_user}:{db_pass}@{db_host}:{db_port}/{db_name}'
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 db = SQLAlchemy(app)
@@ -1957,12 +1958,6 @@ def logout():
     return redirect(url_for('login'))
 
 # =====================
-# RUN
-# =====================
-if __name__ == '__main__':
-    app.run(debug=True)
-
-# =====================
 # API: PREPROCESS
 # =====================
 @app.route('/api/preprocess', methods=['POST'])
@@ -2146,3 +2141,9 @@ def api_stats():
         'cv_acc_std'    : round(float(cv_acc_std), 2),
         'cv_f1_mean'    : round(float(cv_f1_mean), 2),
     })
+# =====================
+# RUN
+# =====================
+if __name__ == '__main__':
+    port = int(os.environ.get('PORT', 5000))
+    app.run(host='0.0.0.0', port=port, debug=True)
