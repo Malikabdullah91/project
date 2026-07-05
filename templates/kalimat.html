@@ -1,0 +1,160 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <link
+      rel="icon"
+      href="{{ url_for('static', filename='assets/icon.png') }}"
+    />
+    <link
+      rel="stylesheet"
+      href="{{ url_for('static', filename='css/styles.css') }}"
+    />
+    <link
+      href="https://unpkg.com/boxicons@2.0.7/css/boxicons.min.css"
+      rel="stylesheet"
+    />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Cek Kalimat - Analisis Sentimen</title>
+  </head>
+
+  <body>
+    <!-- SIDEBAR -->
+    <div class="sidebar">
+      <div class="logo-details">
+        <i class="bx bx-category"></i>
+        <span class="logo_name">Analisis Sentimen</span>
+      </div>
+      <ul class="nav-links">
+        <li>
+          <a href="{{ url_for('dashboard') }}">
+            <i class="bx bx-grid-alt"></i>
+            <span class="links_name">Dashboard</span>
+          </a>
+        </li>
+        <li>
+          <a href="{{ url_for('dataset') }}">
+            <i class="bx bx-cloud-upload"></i>
+            <span class="links_name">Upload Dataset</span>
+          </a>
+        </li>
+        <li>
+          <a href="{{ url_for('hasil') }}">
+            <i class="bx bx-cog"></i>
+            <span class="links_name">Hasil Pre-Processing</span>
+          </a>
+        </li>
+        <li>
+          <a href="{{ url_for('klasifikasi') }}">
+            <i class="bx bx-brain"></i>
+            <span class="links_name">Klasifikasi</span>
+          </a>
+        </li>
+        <li>
+          <a href="{{ url_for('datatesting') }}">
+            <i class="bx bx-data"></i>
+            <span class="links_name">Data Testing</span>
+          </a>
+        </li>
+        <li>
+          <a href="{{ url_for('kalimat') }}" class="active">
+            <i class="bx bxs-check-circle"></i>
+            <span class="links_name">Cek Kalimat</span>
+          </a>
+        </li>
+        <li>
+          <a href="{{ url_for('logout') }}">
+            <i class="bx bx-log-out"></i>
+            <span class="links_name">Log out</span>
+          </a>
+        </li>
+      </ul>
+    </div>
+
+    <!-- MAIN -->
+    <section class="home-section">
+      <nav>
+        <div class="sidebar-button">
+          <i class="bx bx-menu sidebarBtn"></i>
+        </div>
+        <div class="profile-details">
+          <span class="admin_name">{{ session.get('user', 'Admin') }}</span>
+        </div>
+      </nav>
+
+      <div class="home-content">
+        <!-- FLASH -->
+        {% with messages = get_flashed_messages() %} {% if messages %} {% for
+        msg in messages %}
+        <div class="alert">{{ msg }}</div>
+        {% endfor %} {% endif %} {% endwith %}
+
+        <div class="home-content cek-sentimen-page">
+          <div class="page-title">
+            <i class="bx bx-message-square-dots"></i>
+            Cek Kalimat Sentimen
+          </div>
+
+          <div class="sentimen-box">
+            <form action="{{ url_for('kalimat') }}" method="POST">
+              <textarea
+                name="kalimat"
+                placeholder="Masukkan kalimat tentang investasi emas..."
+                required
+              >
+{{ kalimat_input or '' }}</textarea
+              >
+              <button type="submit" class="btn-sentimen">Analisis</button>
+            </form>
+
+            {% if hasil %}
+            <div
+              id="resultBox"
+              class="result-box"
+              style="display: block; margin-top: 20px"
+            >
+              {% if kalimat_input %}
+              <div style="font-size: 0.85em; color: #888; margin-bottom: 6px">
+                <i class="bx bx-message-detail"></i>
+                Kalimat: <em>"{{ kalimat_input }}"</em>
+              </div>
+              {% endif %} Hasil Sentimen:
+              <span
+                id="hasil"
+                class="{{ hasil }}"
+                style="
+                  font-weight: bold;
+                  color: {% if hasil == 'positif' %}green{% elif hasil == 'negatif' %}red{% else %}orange{% endif %};
+                  font-size: 1.4em;
+                  text-transform: uppercase;
+                "
+              >
+                {{ hasil }}
+              </span>
+              {% if not request.method == 'POST' %}
+              <div style="font-size: 0.78em; color: #aaa; margin-top: 8px">
+                <i class="bx bx-time"></i> Hasil analisis terakhir (tersimpan
+                dari sesi sebelumnya)
+              </div>
+              {% endif %}
+            </div>
+            {% endif %}
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <script>
+      let sidebar = document.querySelector(".sidebar");
+      let sidebarBtn = document.querySelector(".sidebarBtn");
+      sidebarBtn.onclick = function () {
+        sidebar.classList.toggle("active");
+        if (sidebar.classList.contains("active")) {
+          sidebarBtn.classList.replace("bx-menu", "bx-menu-alt-right");
+        } else {
+          sidebarBtn.classList.replace("bx-menu-alt-right", "bx-menu");
+        }
+      };
+    </script>
+  </body>
+</html>

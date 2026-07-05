@@ -1,0 +1,557 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <link
+      rel="icon"
+      href="{{ url_for('static', filename='assets/icon.png') }}"
+    />
+    <link
+      rel="stylesheet"
+      href="{{ url_for('static', filename='css/styles.css') }}"
+    />
+    <link
+      href="https://unpkg.com/boxicons@2.0.7/css/boxicons.min.css"
+      rel="stylesheet"
+    />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Data Testing - Analisis Sentimen</title>
+    <style>
+      :root {
+        --primary: #1e3a5f;
+        --accent: #0ea5e9;
+        --accent-h: #0284c7;
+      }
+
+      /* ── RINGKASAN STAT ── */
+      .ringkasan-row {
+        display: flex;
+        gap: 14px;
+        flex-wrap: wrap;
+        margin-bottom: 20px;
+      }
+      .ring-card {
+        flex: 1;
+        min-width: 110px;
+        background: #fff;
+        border-radius: 12px;
+        padding: 16px 14px;
+        text-align: center;
+        box-shadow: 0 4px 14px rgba(0, 0, 0, 0.07);
+        border-top: 4px solid #dee2e6;
+      }
+      .ring-card.tot {
+        border-top-color: #0ea5e9;
+      }
+      .ring-card.pos {
+        border-top-color: #22c55e;
+      }
+      .ring-card.neg {
+        border-top-color: #ef4444;
+      }
+      .ring-card.net {
+        border-top-color: #64748b;
+      }
+      .ring-card .val {
+        font-size: 1.9em;
+        font-weight: 800;
+        line-height: 1.1;
+        color: #1e3a5f;
+      }
+      .ring-card .lbl {
+        font-size: 0.72em;
+        color: #888;
+        margin-top: 4px;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+      }
+      .ring-card .pct {
+        font-size: 0.8em;
+        color: #aaa;
+        margin-top: 2px;
+      }
+
+      /* ── BADGE SENTIMEN ── */
+      .badge-sentimen {
+        display: inline-block;
+        padding: 3px 12px;
+        border-radius: 20px;
+        font-size: 0.82em;
+        font-weight: 700;
+        letter-spacing: 0.3px;
+      }
+      .badge-pos {
+        background: #dcfce7;
+        color: #14532d;
+      }
+      .badge-neg {
+        background: #fee2e2;
+        color: #7f1d1d;
+      }
+      .badge-net {
+        background: #e0f2fe;
+        color: #075985;
+      }
+
+      /* ── UPLOAD BOX STYLE ── */
+      .upload-area {
+        border: 2px dashed #0ea5e9;
+        border-radius: 12px;
+        background: #f0f9ff;
+        padding: 24px 20px;
+        text-align: center;
+        cursor: pointer;
+        transition: 0.2s;
+        margin-bottom: 16px;
+      }
+      .upload-area:hover {
+        background: #e0f2fe;
+        border-color: #0284c7;
+      }
+      .upload-area i {
+        font-size: 2.2em;
+        color: #0ea5e9;
+      }
+      .upload-area p {
+        color: #64748b;
+        font-size: 0.88em;
+        margin-top: 6px;
+      }
+      .upload-area input[type="file"] {
+        width: 100%;
+        margin-top: 10px;
+        border: none;
+        background: transparent;
+        cursor: pointer;
+        font-size: 0.88em;
+      }
+
+      /* ── BTN SUBMIT ── */
+      .btn-jalankan {
+        background: #0ea5e9;
+        color: #fff;
+        border: none;
+        padding: 11px 26px;
+        border-radius: 10px;
+        font-size: 0.9em;
+        font-weight: 700;
+        cursor: pointer;
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        box-shadow: 0 5px 14px rgba(14, 165, 233, 0.35);
+        transition: 0.2s;
+      }
+      .btn-jalankan:hover {
+        background: #0284c7;
+        transform: translateY(-2px);
+        box-shadow: 0 8px 20px rgba(14, 165, 233, 0.45);
+      }
+
+      /* ── INFO STRIP ── */
+      .info-strip {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        background: #eff6ff;
+        border-left: 4px solid #0ea5e9;
+        border-radius: 0 8px 8px 0;
+        padding: 10px 14px;
+        font-size: 0.85em;
+        color: #1e3a5f;
+        margin-bottom: 18px;
+      }
+      .info-strip i {
+        font-size: 1.15em;
+        color: #0ea5e9;
+        flex-shrink: 0;
+      }
+
+      .warn-strip {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        background: #fff7ed;
+        border-left: 4px solid #f97316;
+        border-radius: 0 8px 8px 0;
+        padding: 10px 14px;
+        font-size: 0.85em;
+        color: #7c2d12;
+        margin-bottom: 18px;
+      }
+      .warn-strip i {
+        font-size: 1.15em;
+        color: #f97316;
+        flex-shrink: 0;
+      }
+
+      /* ── SECTION TITLE ── */
+      .section-title {
+        font-size: 1em;
+        font-weight: 700;
+        color: #1e3a5f;
+        margin-bottom: 14px;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+      }
+      .section-title i {
+        color: #0ea5e9;
+        font-size: 1.2em;
+      }
+
+      /* ── NOTE ── */
+      .table-note {
+        font-size: 0.77em;
+        color: #999;
+        margin-top: 8px;
+        font-style: italic;
+      }
+
+      /* ── PAGE HEADER ── */
+      .page-header {
+        margin-bottom: 20px;
+      }
+      .page-header h1 {
+        font-size: 1.6em;
+        font-weight: 800;
+        color: #1e3a5f;
+        margin-bottom: 4px;
+      }
+      .page-header p {
+        font-size: 0.88em;
+        color: #64748b;
+        line-height: 1.6;
+      }
+
+      /* ── CARD OVERRIDE ── */
+      .testing-page .card {
+        background: #fff;
+        border: 1px solid #e2e8f0;
+        border-radius: 12px;
+        padding: 20px 22px;
+        box-shadow: 0 2px 12px rgba(0, 0, 0, 0.05);
+        width: 100%;
+        display: block;
+      }
+    </style>
+  </head>
+
+  <body>
+    <!-- SIDEBAR -->
+    <div class="sidebar">
+      <div class="logo-details">
+        <i class="bx bx-category"></i>
+        <span class="logo_name">Analisis Sentimen</span>
+      </div>
+      <ul class="nav-links">
+        <li>
+          <a href="{{ url_for('dashboard') }}"
+            ><i class="bx bx-grid-alt"></i
+            ><span class="links_name">Dashboard</span></a
+          >
+        </li>
+        <li>
+          <a href="{{ url_for('dataset') }}"
+            ><i class="bx bx-cloud-upload"></i
+            ><span class="links_name">Upload Dataset</span></a
+          >
+        </li>
+        <li>
+          <a href="{{ url_for('hasil') }}"
+            ><i class="bx bx-cog"></i
+            ><span class="links_name">Hasil Pre-Processing</span></a
+          >
+        </li>
+        <li>
+          <a href="{{ url_for('klasifikasi') }}"
+            ><i class="bx bx-brain"></i
+            ><span class="links_name">Klasifikasi</span></a
+          >
+        </li>
+        <li>
+          <a href="{{ url_for('datatesting') }}" class="active"
+            ><i class="bx bx-data"></i
+            ><span class="links_name">Data Testing</span></a
+          >
+        </li>
+        <li>
+          <a href="{{ url_for('kalimat') }}"
+            ><i class="bx bxs-check-circle"></i
+            ><span class="links_name">Cek Kalimat</span></a
+          >
+        </li>
+        <li>
+          <a href="{{ url_for('logout') }}"
+            ><i class="bx bx-log-out"></i
+            ><span class="links_name">Log out</span></a
+          >
+        </li>
+      </ul>
+    </div>
+
+    <!-- MAIN -->
+    <section class="home-section">
+      <nav>
+        <div class="sidebar-button"><i class="bx bx-menu sidebarBtn"></i></div>
+        <div class="profile-details">
+          <span class="admin_name">{{ session.get('user', 'Admin') }}</span>
+        </div>
+      </nav>
+
+      <div class="home-content">
+        {% with messages = get_flashed_messages() %}{% if messages %}{% for msg
+        in messages %}
+        <div
+          class="alert"
+          style="
+            background: #eff6ff;
+            color: #1e3a5f;
+            padding: 12px 16px;
+            border-radius: 8px;
+            margin-bottom: 14px;
+            border-left: 4px solid #0ea5e9;
+          "
+        >
+          <i class="bx bx-error-circle"></i> {{ msg }}
+        </div>
+        {% endfor %}{% endif %}{% endwith %}
+
+        <!-- PAGE HEADER -->
+        <div class="page-header">
+          <h1>
+            <i class="bx bx-data" style="color: #0ea5e9"></i> Data Testing
+          </h1>
+          <p>
+            Upload file CSV berisi kolom teks untuk diprediksi sentimennya
+            menggunakan model yang sudah ditraining.
+          </p>
+        </div>
+
+        <!-- INFO STRIP -->
+        <div class="info-strip">
+          <i class="bx bx-info-circle"></i>
+          Pastikan sudah melakukan <b>Training model</b> di halaman Klasifikasi
+          sebelum melakukan testing. Format file: <b>CSV</b> dengan kolom
+          <code
+            style="
+              background: rgba(0, 0, 0, 0.08);
+              padding: 1px 5px;
+              border-radius: 4px;
+            "
+            >teks</code
+          >
+          /
+          <code
+            style="
+              background: rgba(0, 0, 0, 0.08);
+              padding: 1px 5px;
+              border-radius: 4px;
+            "
+            >komentar</code
+          >
+          /
+          <code
+            style="
+              background: rgba(0, 0, 0, 0.08);
+              padding: 1px 5px;
+              border-radius: 4px;
+            "
+            >ulasan</code
+          >.
+        </div>
+
+        {% if nama_file_cache and not request.method == 'POST' %}
+        <div
+          class="info-strip"
+          style="
+            background: #f0fdf4;
+            border-left-color: #22c55e;
+            color: #14532d;
+            margin-bottom: 18px;
+          "
+        >
+          <i class="bx bx-check-circle" style="color: #22c55e"></i>
+          Menampilkan hasil prediksi terakhir dari file
+          <b>{{ nama_file_cache }}</b>. Upload file baru untuk menjalankan
+          prediksi ulang.
+        </div>
+        {% endif %}
+
+        <!-- FORM UPLOAD -->
+        <div class="testing-page">
+          <div class="card" style="margin-bottom: 20px">
+            <div class="section-title">
+              <i class="bx bx-upload"></i> Upload File CSV
+            </div>
+            <form
+              action="{{ url_for('datatesting') }}"
+              method="POST"
+              enctype="multipart/form-data"
+              id="formTesting"
+            >
+              <div
+                class="upload-area"
+                onclick="document.getElementById('fileInput').click()"
+              >
+                <i class="bx bx-file-find"></i>
+                <p>Klik untuk memilih file, atau drag &amp; drop di sini</p>
+                <input
+                  type="file"
+                  name="file"
+                  accept=".csv"
+                  required
+                  id="fileInput"
+                  style="display: none"
+                  onchange="tampilkanNamaFile(this)"
+                />
+                <p
+                  id="namaFile"
+                  style="color: #0ea5e9; font-weight: 600; margin-top: 8px"
+                ></p>
+              </div>
+              <button type="submit" class="btn-jalankan" id="btnJalankan">
+                <i class="bx bx-play-circle"></i> Jalankan Prediksi
+              </button>
+            </form>
+          </div>
+
+          <!-- RINGKASAN HASIL -->
+          {% if ringkasan %}
+          <div class="ringkasan-row">
+            <div class="ring-card tot">
+              <div class="val">{{ ringkasan.total }}</div>
+              <div class="lbl">Total Data</div>
+            </div>
+            <div class="ring-card pos">
+              <div class="val">{{ ringkasan.positif }}</div>
+              <div class="lbl">Positif</div>
+              <div class="pct">{{ ringkasan.pct_pos }}%</div>
+            </div>
+            <div class="ring-card neg">
+              <div class="val">{{ ringkasan.negatif }}</div>
+              <div class="lbl">Negatif</div>
+              <div class="pct">{{ ringkasan.pct_neg }}%</div>
+            </div>
+            <div class="ring-card net">
+              <div class="val">{{ ringkasan.netral }}</div>
+              <div class="lbl">Netral</div>
+              <div class="pct">{{ ringkasan.pct_net }}%</div>
+            </div>
+          </div>
+          {% endif %}
+
+          <!-- TABEL HASIL -->
+          {% if hasil %}
+          <div class="card">
+            <div class="section-title">
+              <i class="bx bx-table"></i>
+              Hasil Prediksi
+              <span
+                style="
+                  font-size: 0.82em;
+                  font-weight: 400;
+                  color: #888;
+                  margin-left: 4px;
+                "
+              >
+                (menampilkan {{ hasil|length }} data)
+              </span>
+            </div>
+
+            <div class="table-wrapper" style="overflow-x: auto">
+              <table>
+                <thead>
+                  <tr>
+                    <th style="width: 50px">#</th>
+                    {% for key in hasil[0].keys() %}
+                    <th>{{ key | replace('_', ' ') | title }}</th>
+                    {% endfor %}
+                  </tr>
+                </thead>
+                <tbody>
+                  {% for row in hasil %}
+                  <tr>
+                    <td style="font-weight: 700; color: #aaa">
+                      {{ loop.index }}
+                    </td>
+                    {% for key, val in row.items() %}
+                    <td
+                      style="
+                        text-align: left;
+                        max-width: 400px;
+                        word-break: break-word;
+                      "
+                    >
+                      {% if key == 'prediksi' %} {% if val == 'positif' %}
+                      <span class="badge-sentimen badge-pos">✅ Positif</span>
+                      {% elif val == 'negatif' %}
+                      <span class="badge-sentimen badge-neg">❌ Negatif</span>
+                      {% elif val == 'netral' %}
+                      <span class="badge-sentimen badge-net">➖ Netral</span>
+                      {% else %}
+                      <span
+                        class="badge-sentimen"
+                        style="background: #f0f0f0; color: #555"
+                        >{{ val }}</span
+                      >
+                      {% endif %} {% elif val == 'positif' %}
+                      <span class="badge-sentimen badge-pos">✅ Positif</span>
+                      {% elif val == 'negatif' %}
+                      <span class="badge-sentimen badge-neg">❌ Negatif</span>
+                      {% elif val == 'netral' %}
+                      <span class="badge-sentimen badge-net">➖ Netral</span>
+                      {% else %} {{ val }} {% endif %}
+                    </td>
+                    {% endfor %}
+                  </tr>
+                  {% endfor %}
+                </tbody>
+              </table>
+            </div>
+            {% if hasil|length == 50 %}
+            <p class="table-note">
+              * Menampilkan maksimal 50 baris pertama. Download hasil lengkap
+              jika diperlukan.
+            </p>
+            {% endif %}
+          </div>
+          {% endif %}
+        </div>
+      </div>
+    </section>
+
+    <script>
+      // Sidebar toggle
+      document.querySelector(".sidebarBtn").onclick = function () {
+        document.querySelector(".sidebar").classList.toggle("active");
+      };
+
+      // Tampilkan nama file yang dipilih
+      function tampilkanNamaFile(input) {
+        const el = document.getElementById("namaFile");
+        if (input.files && input.files[0]) {
+          el.textContent = "📄 " + input.files[0].name;
+        }
+      }
+
+      // Loading state saat submit
+      document
+        .getElementById("formTesting")
+        .addEventListener("submit", function () {
+          const btn = document.getElementById("btnJalankan");
+          btn.disabled = true;
+          btn.innerHTML =
+            '<span style="display:inline-block;width:14px;height:14px;border:2px solid rgba(255,255,255,0.4);border-top-color:#fff;border-radius:50%;animation:spin 0.6s linear infinite;vertical-align:middle;margin-right:6px"></span> Memproses...';
+        });
+    </script>
+    <style>
+      @keyframes spin {
+        to {
+          transform: rotate(360deg);
+        }
+      }
+    </style>
+  </body>
+</html>

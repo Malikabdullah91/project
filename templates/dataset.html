@@ -1,0 +1,348 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <link
+      rel="icon"
+      href="{{ url_for('static', filename='assets/icon.png') }}"
+    />
+    <link
+      rel="stylesheet"
+      href="{{ url_for('static', filename='css/styles.css') }}"
+    />
+    <link
+      href="https://unpkg.com/boxicons@2.0.7/css/boxicons.min.css"
+      rel="stylesheet"
+    />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Dataset - Analisis Sentimen</title>
+    <style>
+      :root {
+        --primary: #1e3a5f;
+        --accent: #0ea5e9;
+        --accent-h: #0284c7;
+      }
+
+      /* Upload box */
+      .box-upload {
+        background: #fff;
+        border: 1px solid #e2e8f0;
+        border-radius: 12px;
+        padding: 28px 28px 24px;
+        margin-bottom: 24px;
+        box-shadow: 0 2px 12px rgba(0, 0, 0, 0.05);
+      }
+      .box-upload h2 {
+        font-size: 1.2em;
+        font-weight: 700;
+        color: var(--primary);
+        margin-bottom: 8px;
+      }
+      .box-upload p {
+        font-size: 0.88em;
+        color: #64748b;
+        margin-bottom: 14px;
+      }
+      .box-upload input[type="file"] {
+        display: block;
+        margin-bottom: 16px;
+        font-size: 0.88em;
+        color: #374151;
+      }
+
+      /* Upload button */
+      .btn-upload {
+        background: var(--accent);
+        color: #fff;
+        border: none;
+        padding: 10px 24px;
+        border-radius: 8px;
+        font-size: 0.9em;
+        font-weight: 700;
+        cursor: pointer;
+        box-shadow: 0 4px 12px rgba(14, 165, 233, 0.3);
+        transition: 0.2s;
+      }
+      .btn-upload:hover {
+        background: var(--accent-h);
+        transform: translateY(-1px);
+        box-shadow: 0 6px 18px rgba(14, 165, 233, 0.4);
+      }
+
+      /* Table section box */
+      .box-table {
+        background: #fff;
+        border: 1px solid #e2e8f0;
+        border-radius: 12px;
+        padding: 24px 28px;
+        box-shadow: 0 2px 12px rgba(0, 0, 0, 0.05);
+      }
+      .box-table h3 {
+        font-size: 1.05em;
+        font-weight: 700;
+        color: var(--primary);
+        margin-bottom: 16px;
+      }
+
+      /* Action buttons in table */
+      .btn-detail {
+        background: #eff6ff;
+        color: #1d4ed8;
+        border: 1px solid #bfdbfe;
+        padding: 4px 12px;
+        border-radius: 6px;
+        font-size: 0.8em;
+        font-weight: 600;
+        cursor: pointer;
+        transition: 0.15s;
+      }
+      .btn-detail:hover {
+        background: #dbeafe;
+      }
+
+      .btn-clean {
+        background: #0ea5e9;
+        color: #fff;
+        border: none;
+        padding: 4px 12px;
+        border-radius: 6px;
+        font-size: 0.8em;
+        font-weight: 600;
+        cursor: pointer;
+        transition: 0.15s;
+      }
+      .btn-clean:hover {
+        background: #0284c7;
+      }
+
+      .btn-delete {
+        background: #fee2e2;
+        color: #7f1d1d;
+        border: 1px solid #fca5a5;
+        padding: 4px 12px;
+        border-radius: 6px;
+        font-size: 0.8em;
+        font-weight: 600;
+        cursor: pointer;
+        transition: 0.15s;
+      }
+      .btn-delete:hover {
+        background: #fecaca;
+      }
+
+      /* Preview table inside detail container */
+      #detailContainer {
+        margin-top: 20px;
+      }
+      #detailContainer h3 {
+        font-size: 1em;
+        font-weight: 700;
+        color: var(--primary);
+        margin-bottom: 10px;
+      }
+    </style>
+  </head>
+
+  <body>
+    <!-- SIDEBAR -->
+    <div class="sidebar">
+      <div class="logo-details">
+        <i class="bx bx-category"></i>
+        <span class="logo_name">Analisis Sentimen</span>
+      </div>
+      <ul class="nav-links">
+        <li>
+          <a href="{{ url_for('dashboard') }}">
+            <i class="bx bx-grid-alt"></i>
+            <span class="links_name">Dashboard</span>
+          </a>
+        </li>
+        <li>
+          <a href="{{ url_for('dataset') }}" class="active">
+            <i class="bx bx-cloud-upload"></i>
+            <span class="links_name">Upload Dataset</span>
+          </a>
+        </li>
+        <li>
+          <a href="{{ url_for('hasil') }}">
+            <i class="bx bx-cog"></i>
+            <span class="links_name">Hasil Pre-Processing</span>
+          </a>
+        </li>
+        <li>
+          <a href="{{ url_for('klasifikasi') }}">
+            <i class="bx bx-brain"></i>
+            <span class="links_name">Klasifikasi</span>
+          </a>
+        </li>
+        <li>
+          <a href="{{ url_for('datatesting') }}">
+            <i class="bx bx-data"></i>
+            <span class="links_name">Data Testing</span>
+          </a>
+        </li>
+        <li>
+          <a href="{{ url_for('kalimat') }}">
+            <i class="bx bxs-check-circle"></i>
+            <span class="links_name">Cek Kalimat</span>
+          </a>
+        </li>
+        <li>
+          <a href="{{ url_for('logout') }}">
+            <i class="bx bx-log-out"></i>
+            <span class="links_name">Log out</span>
+          </a>
+        </li>
+      </ul>
+    </div>
+
+    <!-- MAIN -->
+    <section class="home-section">
+      <nav>
+        <div class="sidebar-button">
+          <i class="bx bx-menu sidebarBtn"></i>
+        </div>
+        <div class="profile-details">
+          <span class="admin_name">{{ session.get('user', 'Admin') }}</span>
+        </div>
+      </nav>
+
+      <div class="home-content">
+        <!-- FLASH -->
+        {% with messages = get_flashed_messages() %} {% if messages %} {% for
+        msg in messages %}
+        <div class="alert">{{ msg }}</div>
+        {% endfor %} {% endif %} {% endwith %}
+
+        <!-- UPLOAD FORM -->
+        <div class="box-upload">
+          <form
+            action="{{ url_for('dataset') }}"
+            method="POST"
+            enctype="multipart/form-data"
+          >
+            <h2>Upload Dataset</h2>
+            <p>
+              Pilih file CSV (wajib memiliki kolom <b>teks</b> dan
+              <b>label</b>):
+            </p>
+            <input type="file" name="file_csv" accept=".csv" required />
+            <button type="submit" class="btn-upload">Upload</button>
+          </form>
+        </div>
+
+        <!-- TABEL DAFTAR DATASET -->
+        <div class="box-table">
+          <h3>Daftar Dataset</h3>
+
+          {% if datasets %}
+          <table border="1" cellpadding="5">
+            <thead>
+              <tr>
+                <th>#</th>
+                <th>Nama File</th>
+                <th>Jumlah Data</th>
+                <th>Status</th>
+                <th>Aksi</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for d in datasets %}
+              <tr>
+                <td>{{ d.id }}</td>
+                <td>{{ d.filename }}</td>
+                <td>{{ d.jumlah }}</td>
+                <td>
+                  <span
+                    style="color: {% if d.status == 'OK' %}green{% else %}red{% endif %}"
+                  >
+                    {{ d.status }}
+                  </span>
+                </td>
+                <td>
+                  <button
+                    class="btn-detail"
+                    onclick="showDetail('{{ d.filename }}')"
+                  >
+                    Detail
+                  </button>
+                  <a href="{{ url_for('clean', filename=d.filename) }}">
+                    <button class="btn-clean">Pilih & Proses</button>
+                  </a>
+                  <a
+                    href="{{ url_for('delete', filename=d.filename) }}"
+                    onclick="return confirm('Yakin hapus file {{ d.filename }}?')"
+                  >
+                    <button class="btn-delete">Delete</button>
+                  </a>
+                </td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+          {% else %}
+          <p>Belum ada dataset yang diupload.</p>
+          {% endif %}
+
+          <!-- PREVIEW DETAIL -->
+          <div id="detailContainer" style="margin-top: 20px"></div>
+        </div>
+      </div>
+    </section>
+
+    <script>
+      // Sidebar toggle
+      let sidebar = document.querySelector(".sidebar");
+      let sidebarBtn = document.querySelector(".sidebarBtn");
+      sidebarBtn.onclick = function () {
+        sidebar.classList.toggle("active");
+      };
+
+      // Ambil detail dataset via AJAX
+      async function showDetail(filename) {
+        const container = document.getElementById("detailContainer");
+        container.innerHTML = "<p>Loading data...</p>";
+
+        try {
+          const response = await fetch(
+            `/detail-data/${encodeURIComponent(filename)}`,
+          );
+          const result = await response.json();
+
+          if (result.error) {
+            container.innerHTML = `<p style="color:red;">${result.error}</p>`;
+            return;
+          }
+
+          const columns = result.columns;
+          const data = result.data;
+
+          if (!data || data.length === 0) {
+            container.innerHTML = "<p>Data kosong</p>";
+            return;
+          }
+
+          let table = `<h3>Preview Dataset: ${filename} (${result.total_data} baris)</h3>`;
+          table += "<table border='1' cellpadding='5'><thead><tr>";
+          columns.forEach((col) => {
+            table += `<th>${col}</th>`;
+          });
+          table += "</tr></thead><tbody>";
+          data.forEach((row) => {
+            table += "<tr>";
+            columns.forEach((col) => {
+              table += `<td>${row[col] ?? ""}</td>`;
+            });
+            table += "</tr>";
+          });
+          table += "</tbody></table>";
+
+          container.innerHTML = table;
+        } catch (error) {
+          container.innerHTML =
+            "<p style='color:red;'>Error mengambil data</p>";
+        }
+      }
+    </script>
+  </body>
+</html>

@@ -1,0 +1,1055 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <link
+      rel="icon"
+      href="{{ url_for('static', filename='assets/icon.png') }}"
+    />
+    <link
+      rel="stylesheet"
+      href="{{ url_for('static', filename='css/styles.css') }}"
+    />
+    <link
+      href="https://unpkg.com/boxicons@2.0.7/css/boxicons.min.css"
+      rel="stylesheet"
+    />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Preprocessing - Analisis Sentimen</title>
+    <style>
+      /* ── PIPELINE FLOW ── */
+      .pipeline-wrap {
+        background: #f8f9fa;
+        border: 1px solid #e3e6ea;
+        border-radius: 12px;
+        padding: 18px 22px;
+        margin: 18px 0;
+      }
+      .pipeline-title {
+        font-size: 0.78em;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 1px;
+        color: #6c757d;
+        margin-bottom: 12px;
+      }
+      .step-flow {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        flex-wrap: wrap;
+      }
+      .step-badge {
+        padding: 5px 13px;
+        border-radius: 20px;
+        font-size: 0.82em;
+        font-weight: 600;
+        white-space: nowrap;
+      }
+      .step-badge.aktif {
+        background: #198754;
+        color: #fff;
+      }
+      .step-badge.nonaktif {
+        background: #dee2e6;
+        color: #adb5bd;
+        text-decoration: line-through;
+      }
+      .step-arrow {
+        color: #adb5bd;
+        font-size: 1em;
+      }
+
+      /* ── INFO BOX ── */
+      .info-box {
+        background: #cff4fc;
+        color: #055160;
+        border-left: 4px solid #0dcaf0;
+        padding: 12px 16px;
+        border-radius: 0 8px 8px 0;
+        margin: 14px 0;
+        font-size: 0.87em;
+        line-height: 1.65;
+      }
+      .info-box ul {
+        margin: 6px 0 0 18px;
+      }
+      .info-box code {
+        background: rgba(0, 0, 0, 0.08);
+        padding: 1px 5px;
+        border-radius: 4px;
+        font-size: 0.9em;
+      }
+
+      /* ── LIB STATUS ── */
+      .lib-status {
+        display: flex;
+        gap: 10px;
+        flex-wrap: wrap;
+        margin: 12px 0;
+      }
+      .lib-badge {
+        display: flex;
+        align-items: center;
+        gap: 5px;
+        padding: 4px 12px;
+        border-radius: 20px;
+        font-size: 0.8em;
+        font-weight: 600;
+        border: 1.5px solid;
+      }
+      .lib-badge.ok {
+        border-color: #198754;
+        color: #198754;
+        background: #d1e7dd;
+      }
+      .lib-badge.err {
+        border-color: #dc3545;
+        color: #dc3545;
+        background: #f8d7da;
+      }
+
+      /* ── STEP BUTTONS ── */
+      .step-buttons {
+        display: flex;
+        gap: 8px;
+        flex-wrap: wrap;
+        margin: 18px 0 10px;
+        align-items: center;
+      }
+      .step-btn {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        padding: 8px 16px;
+        border-radius: 8px;
+        font-size: 0.84em;
+        font-weight: 600;
+        cursor: pointer;
+        border: 2px solid transparent;
+        transition: all 0.18s;
+        background: #fff;
+        color: #495057;
+        border-color: #ced4da;
+      }
+      .step-btn:hover:not(:disabled) {
+        background: #0d6efd;
+        color: #fff;
+        border-color: #0d6efd;
+        transform: translateY(-1px);
+        box-shadow: 0 4px 12px rgba(13, 110, 253, 0.25);
+      }
+      .step-btn.active {
+        background: #0d6efd;
+        color: #fff;
+        border-color: #0d6efd;
+      }
+      .step-btn.done {
+        background: #d1e7dd;
+        color: #0a3622;
+        border-color: #198754;
+      }
+      .step-btn:disabled {
+        opacity: 0.55;
+        cursor: not-allowed;
+      }
+      .step-num {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 20px;
+        height: 20px;
+        border-radius: 50%;
+        background: currentColor;
+        font-size: 0.75em;
+        font-weight: 700;
+        color: #fff;
+        flex-shrink: 0;
+      }
+      .step-btn:not(.active):not(.done) .step-num {
+        background: #adb5bd;
+        color: #fff;
+      }
+      .step-btn.active .step-num,
+      .step-btn.done .step-num {
+        background: currentColor;
+      }
+
+      .badge-model {
+        display: inline-block;
+        background: #198754;
+        color: #fff;
+        font-size: 0.7em;
+        padding: 1px 6px;
+        border-radius: 8px;
+        margin-left: 3px;
+        font-weight: 600;
+      }
+      .badge-lib {
+        display: inline-block;
+        background: #0d6efd;
+        color: #fff;
+        font-size: 0.7em;
+        padding: 1px 6px;
+        border-radius: 8px;
+        margin-left: 3px;
+        font-weight: 600;
+      }
+
+      /* ── ACTION BAR ── */
+      .action-bar {
+        display: flex;
+        gap: 10px;
+        align-items: center;
+        flex-wrap: wrap;
+        margin: 14px 0;
+        padding: 12px 16px;
+        background: #fff;
+        border: 1px solid #dee2e6;
+        border-radius: 10px;
+      }
+      .btn-process-all {
+        padding: 9px 20px;
+        background: #198754;
+        color: #fff;
+        border: none;
+        border-radius: 8px;
+        font-size: 0.88em;
+        font-weight: 700;
+        cursor: pointer;
+        transition: all 0.18s;
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+      }
+      .btn-process-all:hover:not(:disabled) {
+        background: #146c43;
+        transform: translateY(-1px);
+      }
+      .btn-process-all:disabled {
+        opacity: 0.6;
+        cursor: not-allowed;
+      }
+      .btn-download {
+        padding: 9px 20px;
+        background: #0d6efd;
+        color: #fff;
+        border: none;
+        border-radius: 8px;
+        font-size: 0.88em;
+        font-weight: 700;
+        cursor: pointer;
+        text-decoration: none;
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        transition: all 0.18s;
+      }
+      .btn-download:hover {
+        background: #0b5ed7;
+        transform: translateY(-1px);
+      }
+      .btn-download.disabled {
+        background: #6c757d;
+        pointer-events: none;
+        opacity: 0.6;
+      }
+      .process-status {
+        font-size: 0.83em;
+        color: #6c757d;
+        display: flex;
+        align-items: center;
+        gap: 5px;
+      }
+      .process-status.ok {
+        color: #198754;
+        font-weight: 600;
+      }
+
+      /* ── TABLE ── */
+      .table-container {
+        overflow-x: auto;
+        margin-top: 16px;
+      }
+      #stepTitle {
+        font-size: 1em;
+        font-weight: 700;
+        color: #495057;
+        margin: 0 0 10px;
+        padding: 8px 14px;
+        background: #e9ecef;
+        border-radius: 8px;
+        display: inline-block;
+      }
+      table {
+        border-collapse: collapse;
+        width: 100%;
+        font-size: 0.84em;
+      }
+      th {
+        padding: 10px 12px;
+        text-align: left;
+        font-weight: 700;
+        white-space: nowrap;
+        position: sticky;
+        top: 0;
+      }
+      td {
+        padding: 9px 12px;
+        border-bottom: 1px solid #f0f0f0;
+        vertical-align: top;
+      }
+      tr:hover td {
+        background: #f8f9fa;
+      }
+      th.col-aktif {
+        background: #d1e7dd;
+        color: #0a3622;
+      }
+      th.col-highlight {
+        background: #cfe2ff;
+        color: #052c65;
+      }
+      th.col-final {
+        background: #fff3cd;
+        color: #664d03;
+      }
+      td.col-highlight {
+        background: #f0f6ff;
+      }
+      td.col-final {
+        background: #fffbef;
+      }
+      .note {
+        font-size: 0.78em;
+        color: #6c757d;
+        margin-top: 8px;
+        font-style: italic;
+      }
+
+      /* ── PAGINATION ── */
+      .pagination-bar {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        margin-top: 14px;
+        flex-wrap: wrap;
+      }
+      .page-btn {
+        padding: 6px 14px;
+        border-radius: 7px;
+        border: 1.5px solid #ced4da;
+        background: #fff;
+        color: #495057;
+        font-size: 0.83em;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.15s;
+      }
+      .page-btn:hover:not(:disabled) {
+        background: #0d6efd;
+        color: #fff;
+        border-color: #0d6efd;
+      }
+      .page-btn:disabled {
+        opacity: 0.4;
+        cursor: not-allowed;
+      }
+      .page-btn.active-page {
+        background: #0d6efd;
+        color: #fff;
+        border-color: #0d6efd;
+      }
+      .page-info {
+        font-size: 0.83em;
+        color: #6c757d;
+      }
+      .page-info b {
+        color: #212529;
+      }
+
+      /* ── LOADING SPINNER ── */
+      .spinner {
+        display: inline-block;
+        width: 14px;
+        height: 14px;
+        border: 2px solid rgba(255, 255, 255, 0.4);
+        border-top-color: #fff;
+        border-radius: 50%;
+        animation: spin 0.6s linear infinite;
+        vertical-align: middle;
+      }
+      @keyframes spin {
+        to {
+          transform: rotate(360deg);
+        }
+      }
+
+      /* ── PROGRESS BAR ── */
+      .progress-wrap {
+        width: 100%;
+        height: 6px;
+        background: #e9ecef;
+        border-radius: 4px;
+        margin: 10px 0;
+        overflow: hidden;
+        display: none;
+      }
+      .progress-bar {
+        height: 100%;
+        background: linear-gradient(90deg, #0d6efd, #198754);
+        border-radius: 4px;
+        width: 0%;
+        transition: width 0.4s ease;
+      }
+    </style>
+  </head>
+
+  <body data-hasil-ready="{{ 'true' if hasil_ready else 'false' }}">
+    <!-- SIDEBAR -->
+    <div class="sidebar">
+      <div class="logo-details">
+        <i class="bx bx-category"></i>
+        <span class="logo_name">Analisis Sentimen</span>
+      </div>
+      <ul class="nav-links">
+        <li>
+          <a href="{{ url_for('dashboard') }}">
+            <i class="bx bx-grid-alt"></i>
+            <span class="links_name">Dashboard</span>
+          </a>
+        </li>
+        <li>
+          <a href="{{ url_for('dataset') }}">
+            <i class="bx bx-cloud-upload"></i>
+            <span class="links_name">Upload Dataset</span>
+          </a>
+        </li>
+        <li>
+          <a href="{{ url_for('hasil') }}" class="active">
+            <i class="bx bx-cog"></i>
+            <span class="links_name">Hasil Pre-Processing</span>
+          </a>
+        </li>
+        <li>
+          <a href="{{ url_for('klasifikasi') }}">
+            <i class="bx bx-brain"></i>
+            <span class="links_name">Klasifikasi</span>
+          </a>
+        </li>
+        <li>
+          <a href="{{ url_for('datatesting') }}">
+            <i class="bx bx-data"></i>
+            <span class="links_name">Data Testing</span>
+          </a>
+        </li>
+        <li>
+          <a href="{{ url_for('kalimat') }}">
+            <i class="bx bxs-check-circle"></i>
+            <span class="links_name">Cek Kalimat</span>
+          </a>
+        </li>
+        <li>
+          <a href="{{ url_for('logout') }}">
+            <i class="bx bx-log-out"></i>
+            <span class="links_name">Log out</span>
+          </a>
+        </li>
+      </ul>
+    </div>
+
+    <!-- MAIN -->
+    <section class="home-section">
+      <nav>
+        <div class="sidebar-button">
+          <i class="bx bx-menu sidebarBtn"></i>
+        </div>
+        <div class="profile-details">
+          <span class="admin_name">{{ session.get('user', 'Admin') }}</span>
+        </div>
+      </nav>
+
+      <div class="home-content">
+        {% with messages = get_flashed_messages() %} {% if messages %}{% for msg
+        in messages %}
+        <div class="alert">{{ msg }}</div>
+        {% endfor %}{% endif %} {% endwith %}
+
+        <div class="container">
+          <h1>Preprocessing Data</h1>
+
+          <!-- PIPELINE FLOW -->
+          <div class="pipeline-wrap">
+            <div class="pipeline-title">
+              📋 Alur Preprocessing (sesuai Colab)
+            </div>
+            <div class="step-flow">
+              <span class="step-badge aktif">① Teks Asli</span>
+              <span class="step-arrow">→</span>
+              <span class="step-badge aktif">② Konversi Emoji</span>
+              <span class="step-arrow">→</span>
+              <span class="step-badge aktif">③ Cleaning</span>
+              <span class="step-arrow">→</span>
+              <span class="step-badge aktif">④ Case Folding</span>
+              <span class="step-arrow">→</span>
+              <span class="step-badge aktif"
+                >⑤ Normalisasi (Emoji+Slang+Sarkasme+Data)</span
+              >
+              <span class="step-arrow">→</span>
+              <span class="step-badge aktif">⑥ Tokenisasi</span>
+              <span class="step-arrow">→</span>
+              <span class="step-badge aktif">⑦ Stopword Removal</span>
+              <span class="step-arrow">→</span>
+              <span class="step-badge aktif">⑧ Stemming</span>
+              <span class="step-arrow">→</span>
+              <span class="step-badge aktif">⑨ TF-IDF → Naive Bayes</span>
+            </div>
+          </div>
+
+          <!-- INFO BOX -->
+          <div class="info-box">
+            ℹ️ Preprocessing menggunakan library yang sama dengan Colab:
+            <ul>
+              <li>
+                <b>emoji</b> — konversi simbol emoji ke teks deskriptif
+                Indonesia
+              </li>
+              <li>
+                <b>Normalisasi (1 tombol, 4 sub-langkah)</b>:
+                <ul style="margin-top: 4px">
+                  <li>
+                    <b>Emoji Teks</b> — emoticon ASCII (<code>:)</code>,
+                    <code>&lt;3</code>, dsb.) → teks deskriptif + hapus karakter
+                    berulang
+                  </li>
+                  <li>
+                    <b>Kata Slang</b> — kamus 100+ kata informal/singkatan
+                    Indonesia (gak, bgt, yg, dll.) → kata baku, didukung
+                    <b>nlp-id Lemmatizer</b>
+                  </li>
+                  <li>
+                    <b>Sarkasme</b> — deteksi pola kalimat sarkasme (misal:
+                    "bagus banget sampai rugi") → ubah ke sentimen eksplisit
+                  </li>
+                  <li>
+                    <b>Data</b> — standarisasi satuan emas, harga, format
+                    penulisan tidak standar (olshop, free ongkir, dll.)
+                  </li>
+                </ul>
+              </li>
+              <li><b>nlp-id StopWord</b> — hapus stopword Bahasa Indonesia</li>
+              <li>
+                <b>PySastrawi</b> — stemming ke bentuk kata dasar (ECS
+                Indonesia)
+              </li>
+              <li>
+                <b>TF-IDF</b> — <code>ngram_range=(1,2)</code>,
+                <code>max_features=5000</code>, <code>sublinear_tf=True</code>
+              </li>
+              <li>
+                <b>Multinomial Naive Bayes</b> — <code>alpha=1.0</code>, kelas:
+                <b>negatif / netral / positif</b>
+              </li>
+            </ul>
+          </div>
+
+          <!-- STATUS LIBRARY -->
+          <div class="lib-status">
+            <div class="lib-badge {{ 'ok' if lib_status.emoji else 'err' }}">
+              <i
+                class="bx {{ 'bx-check-circle' if lib_status.emoji else 'bx-x-circle' }}"
+              ></i>
+              emoji {{ 'aktif' if lib_status.emoji else 'tidak terinstal' }}
+            </div>
+            <div class="lib-badge {{ 'ok' if lib_status.nlp_id else 'err' }}">
+              <i
+                class="bx {{ 'bx-check-circle' if lib_status.nlp_id else 'bx-x-circle' }}"
+              ></i>
+              nlp-id {{ 'aktif' if lib_status.nlp_id else 'tidak terinstal' }}
+            </div>
+            <div class="lib-badge {{ 'ok' if lib_status.sastrawi else 'err' }}">
+              <i
+                class="bx {{ 'bx-check-circle' if lib_status.sastrawi else 'bx-x-circle' }}"
+              ></i>
+              PySastrawi {{ 'aktif' if lib_status.sastrawi else 'tidak
+              terinstal' }}
+            </div>
+          </div>
+
+          {% if not data %}
+          <div
+            class="alert"
+            style="
+              background: #fff3cd;
+              color: #856404;
+              padding: 12px;
+              border-radius: 6px;
+              margin: 15px 0;
+            "
+          >
+            ⚠️ Belum ada dataset yang dipilih. Silakan ke halaman
+            <a href="{{ url_for('dataset') }}">Upload Dataset</a> dan klik
+            <b>Pilih &amp; Proses</b>.
+          </div>
+          {% else %}
+
+          <!-- STEP BUTTONS -->
+          <div class="step-buttons">
+            <button
+              class="step-btn"
+              onclick="runStep('konversi_emoji', this)"
+              id="btn-konversi_emoji"
+            >
+              <span class="step-num">1</span>
+              Konversi Emoji
+              <span class="badge-lib">emoji</span>
+            </button>
+            <button
+              class="step-btn"
+              onclick="runStep('cleaning', this)"
+              id="btn-cleaning"
+            >
+              <span class="step-num">2</span>
+              Cleaning
+              <span class="badge-model">✔ model</span>
+            </button>
+            <button
+              class="step-btn"
+              onclick="runStep('case_folding', this)"
+              id="btn-case_folding"
+            >
+              <span class="step-num">3</span>
+              Case Folding
+              <span class="badge-model">✔ model</span>
+            </button>
+            <button
+              class="step-btn"
+              onclick="runStep('normalisasi', this)"
+              id="btn-normalisasi"
+              title="Normalisasi: Emoji Teks, Kata Slang, Sarkasme, dan Data (satuan/ejaan)"
+            >
+              <span class="step-num">4</span>
+              Normalisasi
+              <span class="badge-lib">emoji+slang+sarkasme+data</span>
+            </button>
+            <button
+              class="step-btn"
+              onclick="runStep('tokenisasi', this)"
+              id="btn-tokenisasi"
+            >
+              <span class="step-num">5</span>
+              Tokenisasi
+            </button>
+            <button
+              class="step-btn"
+              onclick="runStep('stopword', this)"
+              id="btn-stopword"
+            >
+              <span class="step-num">6</span>
+              Stopword
+              <span class="badge-lib">nlp-id</span>
+            </button>
+            <button
+              class="step-btn"
+              onclick="runStep('stemming', this)"
+              id="btn-stemming"
+            >
+              <span class="step-num">7</span>
+              Stemming
+              <span class="badge-lib">Sastrawi</span>
+            </button>
+          </div>
+
+          <!-- PROGRESS BAR -->
+          <div class="progress-wrap" id="progressWrap">
+            <div class="progress-bar" id="progressBar"></div>
+          </div>
+
+          <!-- ACTION BAR: Proses Semua + Download -->
+          <div class="action-bar">
+            <button
+              class="btn-process-all"
+              id="btnProsesAll"
+              onclick="prosesSemuaData()"
+            >
+              <i class="bx bx-play-circle"></i> Proses Semua &amp; Simpan
+            </button>
+            <a
+              href="{{ url_for('download_hasil') }}"
+              class="btn-download {% if not session.get('hasil_preprocessing_ready') %}disabled{% endif %}"
+              id="btnDownload"
+            >
+              <i class="bx bx-download"></i> Download Hasil CSV
+            </a>
+            <span class="process-status" id="processStatus">
+              {% if session.get('hasil_preprocessing_ready') %}
+              <i class="bx bx-check-circle"></i> Data siap didownload {% else %}
+              Klik "Proses Semua" untuk generate file CSV {% endif %}
+            </span>
+          </div>
+
+          <!-- PREVIEW TABLE -->
+          <div class="table-container">
+            <div id="stepTitle">
+              📊 PREVIEW DATA (10 baris) — klik step untuk melihat per tahap
+            </div>
+
+            <table border="1" cellpadding="8" width="100%">
+              <thead id="tableHead">
+                <tr>
+                  <th class="col-aktif">#</th>
+                  <th class="col-aktif">Teks Asli</th>
+                  <th class="col-aktif">Konversi Emoji</th>
+                  <th class="col-aktif">Cleaning</th>
+                  <th class="col-aktif">Case Folding</th>
+                  <th class="col-aktif">Normalisasi</th>
+                  <th class="col-aktif">Tokenisasi</th>
+                  <th class="col-aktif">Stopword</th>
+                  <th class="col-aktif">Stemming (Final)</th>
+                  <th class="col-final">Label</th>
+                </tr>
+              </thead>
+              <tbody id="tableBody">
+                {% for row in data %}
+                <tr>
+                  <td
+                    style="font-weight: 700; color: #6c757d; text-align: center"
+                  >
+                    {{ loop.index }}
+                  </td>
+                  <td>{{ row.teks_asli or '-' }}</td>
+                  <td>-</td>
+                  <td>-</td>
+                  <td>-</td>
+                  <td>-</td>
+                  <td>-</td>
+                  <td>-</td>
+                  <td>-</td>
+                  <td>-</td>
+                </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+            <p class="note">
+              * Klik tombol step satu per satu untuk melihat hasil setiap
+              tahapan. Setelah semua step, klik
+              <b>Proses Semua &amp; Simpan</b> untuk menghasilkan CSV lengkap
+              siap download &amp; digunakan untuk training model.
+            </p>
+            <!-- PAGINATION BAR -->
+            <div
+              class="pagination-bar"
+              id="paginationBar"
+              style="display: none"
+            >
+              <button
+                class="page-btn"
+                id="btnPrev"
+                onclick="gantiHalaman(currentPage - 1)"
+              >
+                ← Prev
+              </button>
+              <span class="page-info" id="pageInfo"></span>
+              <button
+                class="page-btn"
+                id="btnNext"
+                onclick="gantiHalaman(currentPage + 1)"
+              >
+                Next →
+              </button>
+              <span class="page-info" style="margin-left: 6px">
+                Tampilkan:
+                <select
+                  id="perPageSelect"
+                  onchange="ubahPerPage()"
+                  style="
+                    font-size: 0.9em;
+                    padding: 2px 6px;
+                    border-radius: 5px;
+                    border: 1.5px solid #ced4da;
+                  "
+                >
+                  <option value="10">10</option>
+                  <option value="25">25</option>
+                  <option value="50">50</option>
+                  <option value="100">100</option>
+                </select>
+                baris per halaman
+              </span>
+            </div>
+          </div>
+          {% endif %}
+        </div>
+      </div>
+    </section>
+
+    <script>
+      // Sidebar toggle
+      document.querySelector(".sidebarBtn").onclick = function () {
+        document.querySelector(".sidebar").classList.toggle("active");
+      };
+
+      // Mapping step → kolom tabel
+      const STEP_COLS = {
+        konversi_emoji: { idx: 2, label: "Konversi Emoji" },
+        cleaning: { idx: 3, label: "Cleaning" },
+        case_folding: { idx: 4, label: "Case Folding" },
+        normalisasi: { idx: 5, label: "Normalisasi" },
+        tokenisasi: { idx: 6, label: "Tokenisasi" },
+        stopword: { idx: 7, label: "Stopword" },
+        stemming: { idx: 8, label: "Stemming" },
+      };
+
+      // Urutan step
+      const STEP_ORDER = [
+        "konversi_emoji",
+        "cleaning",
+        "case_folding",
+        "normalisasi",
+        "tokenisasi",
+        "stopword",
+        "stemming",
+      ];
+      const doneSteps = new Set();
+      let cachedRows = null;
+
+      // ── PAGINATION STATE ──
+      let currentPage = 1;
+      let totalPages = 1;
+      let totalData = 0;
+      // Baca dari data-attribute di <body> — tidak ada merah-merah di editor
+      let hasilReady = document.body.dataset.hasilReady === "true";
+
+      // Kalau hasil sudah ada, langsung muat tabel tanpa perlu klik "Proses Semua"
+      document.addEventListener("DOMContentLoaded", function () {
+        if (hasilReady) {
+          muatHalaman(1);
+          const btnDl = document.getElementById("btnDownload");
+          if (btnDl) btnDl.classList.remove("disabled");
+          const btn = document.getElementById("btnProsesAll");
+          if (btn)
+            btn.innerHTML = '<i class="bx bx-play-circle"></i> Proses Ulang';
+          STEP_ORDER.forEach((s) => {
+            const b = document.getElementById("btn-" + s);
+            if (b) {
+              b.classList.remove("active");
+              b.classList.add("done");
+            }
+          });
+        }
+      });
+
+      function runStep(step, btn) {
+        const origHTML = btn.innerHTML;
+        btn.disabled = true;
+        btn.innerHTML = `<span class="spinner"></span> Loading...`;
+
+        const pw = document.getElementById("progressWrap");
+        const pb = document.getElementById("progressBar");
+        pw.style.display = "block";
+        pb.style.width = "30%";
+
+        fetch("/step/" + step)
+          .then((res) => res.json())
+          .then((data) => {
+            pb.style.width = "100%";
+
+            if (data.error) {
+              alert("⚠️ " + data.error);
+              btn.disabled = false;
+              btn.innerHTML = origHTML;
+              pb.style.width = "0%";
+              return;
+            }
+
+            cachedRows = data;
+            renderTable(data, step);
+            // Sembunyikan pagination saat melihat per step (hanya 10 baris)
+            document.getElementById("paginationBar").style.display = "none";
+
+            btn.disabled = false;
+            btn.innerHTML = origHTML;
+            btn.classList.remove("active");
+            btn.classList.add("done");
+            doneSteps.add(step);
+
+            const colLabel = STEP_COLS[step]?.label || step;
+            document.getElementById("stepTitle").textContent =
+              `✅ STEP ${STEP_ORDER.indexOf(step) + 1}: ${colLabel.toUpperCase()} — preview 10 baris`;
+
+            setTimeout(() => {
+              pb.style.width = "0%";
+              pw.style.display = "none";
+            }, 600);
+          })
+          .catch(() => {
+            alert("Terjadi kesalahan saat memproses step: " + step);
+            btn.disabled = false;
+            btn.innerHTML = origHTML;
+            pb.style.width = "0%";
+          });
+      }
+
+      function renderTable(rows, activeStep) {
+        const tbody = document.getElementById("tableBody");
+        tbody.innerHTML = "";
+
+        rows.forEach((row, i) => {
+          const no = hasilReady
+            ? (currentPage - 1) *
+                parseInt(document.getElementById("perPageSelect").value) +
+              i +
+              1
+            : i + 1;
+          const cells = [
+            `<td style="font-weight:700;color:#6c757d;text-align:center">${no}</td>`,
+            `<td>${esc(row.teks_asli || "-")}</td>`,
+            `<td${activeStep === "konversi_emoji" ? ' class="col-highlight"' : ""}>${esc(row.konversi_emoji || "-")}</td>`,
+            `<td${activeStep === "cleaning" ? ' class="col-highlight"' : ""}>${esc(row.cleaning || "-")}</td>`,
+            `<td${activeStep === "case_folding" ? ' class="col-highlight"' : ""}>${esc(row.case_folding || "-")}</td>`,
+            `<td${activeStep === "normalisasi" ? ' class="col-highlight"' : ""}>${esc(row.normalisasi || "-")}</td>`,
+            `<td${activeStep === "tokenisasi" ? ' class="col-highlight"' : ""}>${esc(row.tokenisasi || "-")}</td>`,
+            `<td${activeStep === "stopword" ? ' class="col-highlight"' : ""}>${esc(row.stopword || "-")}</td>`,
+            `<td${activeStep === "stemming" ? ' class="col-final"' : ""}>${esc(row.stemming || "-")}</td>`,
+            `<td class="col-final" style="font-weight:600">${esc(row.label || "-")}</td>`,
+          ];
+          tbody.innerHTML += `<tr>${cells.join("")}</tr>`;
+        });
+      }
+
+      function esc(s) {
+        return String(s)
+          .replace(/&/g, "&amp;")
+          .replace(/</g, "&lt;")
+          .replace(/>/g, "&gt;");
+      }
+
+      // ── LOAD HALAMAN DARI /hasil-data ──
+      function muatHalaman(page) {
+        const perPage = parseInt(
+          document.getElementById("perPageSelect").value,
+        );
+        fetch(`/hasil-data?page=${page}&per_page=${perPage}`)
+          .then((res) => res.json())
+          .then((data) => {
+            if (data.error) {
+              alert("⚠️ " + data.error);
+              return;
+            }
+            currentPage = data.page;
+            totalPages = data.total_pages;
+            totalData = data.total;
+            renderTable(data.data, "stemming");
+            renderPagination();
+            document.getElementById("stepTitle").textContent =
+              `✅ SEMUA STEP SELESAI — Menampilkan ${totalData} data (Hal. ${currentPage}/${totalPages})`;
+          })
+          .catch(() => alert("Gagal memuat data halaman."));
+      }
+
+      function gantiHalaman(page) {
+        if (page < 1 || page > totalPages) return;
+        muatHalaman(page);
+        window.scrollTo({
+          top: document.getElementById("stepTitle").offsetTop - 20,
+          behavior: "smooth",
+        });
+      }
+
+      function ubahPerPage() {
+        muatHalaman(1);
+      }
+
+      function renderPagination() {
+        const bar = document.getElementById("paginationBar");
+        bar.style.display = "flex";
+        document.getElementById("btnPrev").disabled = currentPage <= 1;
+        document.getElementById("btnNext").disabled = currentPage >= totalPages;
+        document.getElementById("pageInfo").innerHTML =
+          `Halaman <b>${currentPage}</b> / <b>${totalPages}</b> &nbsp;|&nbsp; Total: <b>${totalData}</b> baris`;
+      }
+
+      // ── PROSES SEMUA & SIMPAN ──
+      function prosesSemuaData() {
+        const btn = document.getElementById("btnProsesAll");
+        const status = document.getElementById("processStatus");
+        const pw = document.getElementById("progressWrap");
+        const pb = document.getElementById("progressBar");
+
+        btn.disabled = true;
+        btn.innerHTML =
+          '<span class="spinner"></span> Memproses seluruh data...';
+        pw.style.display = "block";
+        pb.style.width = "20%";
+        status.textContent = "⏳ Sedang memproses, harap tunggu...";
+        status.className = "process-status";
+
+        let progress = 20;
+        const interval = setInterval(() => {
+          if (progress < 85) {
+            progress += 5;
+            pb.style.width = progress + "%";
+          }
+        }, 400);
+
+        fetch("/proses-semua-preprocessing", { method: "POST" })
+          .then((res) => res.json())
+          .then((data) => {
+            clearInterval(interval);
+            pb.style.width = "100%";
+
+            if (data.error) {
+              alert("⚠️ " + data.error);
+              btn.disabled = false;
+              btn.innerHTML =
+                '<i class="bx bx-play-circle"></i> Proses Semua &amp; Simpan';
+              status.textContent = "❌ Gagal memproses";
+              pb.style.width = "0%";
+              return;
+            }
+
+            // Setelah selesai, aktifkan pagination dan muat halaman 1
+            hasilReady = true;
+            totalData = data.jumlah;
+            totalPages = Math.ceil(
+              totalData /
+                parseInt(document.getElementById("perPageSelect").value),
+            );
+            currentPage = 1;
+            muatHalaman(1);
+
+            const btnDl = document.getElementById("btnDownload");
+            btnDl.classList.remove("disabled");
+
+            status.innerHTML = `<i class="bx bx-check-circle"></i> ${data.jumlah} baris berhasil diproses — siap download`;
+            status.className = "process-status ok";
+
+            btn.disabled = false;
+            btn.innerHTML = '<i class="bx bx-play-circle"></i> Proses Ulang';
+
+            setTimeout(() => {
+              pb.style.width = "0%";
+              pw.style.display = "none";
+            }, 800);
+
+            STEP_ORDER.forEach((s) => {
+              const b = document.getElementById("btn-" + s);
+              if (b) {
+                b.classList.remove("active");
+                b.classList.add("done");
+              }
+            });
+          })
+          .catch((err) => {
+            clearInterval(interval);
+            alert("Terjadi kesalahan saat memproses data.");
+            btn.disabled = false;
+            btn.innerHTML =
+              '<i class="bx bx-play-circle"></i> Proses Semua &amp; Simpan';
+            status.textContent = "❌ Terjadi kesalahan";
+            pb.style.width = "0%";
+          });
+      }
+    </script>
+  </body>
+</html>

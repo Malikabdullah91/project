@@ -1,0 +1,6 @@
+﻿venv_emas/
+__pycache__/
+*.pyc
+*.pyo
+*.log
+instance/

@@ -1,0 +1,528 @@
+<!doctype html>
+<html lang="id">
+  <head>
+    <meta charset="UTF-8" />
+    <link
+      rel="icon"
+      href="{{ url_for('static', filename='assets/icon.png') }}"
+    />
+    <link
+      rel="stylesheet"
+      href="{{ url_for('static', filename='css/styles.css') }}"
+    />
+    <link
+      href="https://unpkg.com/boxicons@2.0.7/css/boxicons.min.css"
+      rel="stylesheet"
+    />
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Klasifikasi - Analisis Sentimen</title>
+  </head>
+
+  <body>
+    <!-- SIDEBAR -->
+    <div class="sidebar">
+      <div class="logo-details">
+        <i class="bx bx-category"></i>
+        <span class="logo_name">Analisis Sentimen</span>
+      </div>
+      <ul class="nav-links">
+        <li>
+          <a href="{{ url_for('dashboard') }}"
+            ><i class="bx bx-grid-alt"></i
+            ><span class="links_name">Dashboard</span></a
+          >
+        </li>
+        <li>
+          <a href="{{ url_for('dataset') }}"
+            ><i class="bx bx-cloud-upload"></i
+            ><span class="links_name">Upload Dataset</span></a
+          >
+        </li>
+        <li>
+          <a href="{{ url_for('hasil') }}"
+            ><i class="bx bx-cog"></i
+            ><span class="links_name">Hasil Pre-Processing</span></a
+          >
+        </li>
+        <li>
+          <a href="{{ url_for('klasifikasi') }}" class="active"
+            ><i class="bx bx-brain"></i
+            ><span class="links_name">Klasifikasi</span></a
+          >
+        </li>
+        <li>
+          <a href="{{ url_for('datatesting') }}"
+            ><i class="bx bx-data"></i
+            ><span class="links_name">Data Testing</span></a
+          >
+        </li>
+        <li>
+          <a href="{{ url_for('kalimat') }}"
+            ><i class="bx bxs-check-circle"></i
+            ><span class="links_name">Cek Kalimat</span></a
+          >
+        </li>
+        <li>
+          <a href="{{ url_for('logout') }}"
+            ><i class="bx bx-log-out"></i
+            ><span class="links_name">Log out</span></a
+          >
+        </li>
+      </ul>
+    </div>
+
+    <!-- MAIN -->
+    <section class="home-section">
+      <nav>
+        <div class="sidebar-button"><i class="bx bx-menu sidebarBtn"></i></div>
+        <div class="profile-details">
+          <span class="admin_name">{{ session.get('user', 'Admin') }}</span>
+        </div>
+      </nav>
+
+      <div class="home-content">
+        <!-- FLASH MESSAGES -->
+        {% with messages = get_flashed_messages() %} {% if messages %} {% for
+        msg in messages %}
+        <div
+          style="
+            background: #eff6ff;
+            border: 1px solid #bfdbfe;
+            border-left: 4px solid var(--blue, #2563eb);
+            border-radius: 8px;
+            padding: 12px 16px;
+            margin-bottom: 14px;
+            font-size: 0.88em;
+            color: #1e3a5f;
+            font-weight: 600;
+          "
+        >
+          <i class="bx bx-info-circle" style="margin-right: 6px"></i>{{ msg }}
+        </div>
+        {% endfor %} {% endif %} {% endwith %}
+
+        <!-- HEADER -->
+        <div class="page-title">
+          <i class="bx bx-brain"></i> Klasifikasi Naive Bayes
+        </div>
+        <p class="page-subtitle">
+          Training model menggunakan data preprocessing dengan algoritma
+          Multinomial Naive Bayes + TF-IDF.
+        </p>
+
+        <!-- DATASET BANNER -->
+        {% if dataset_source %}
+        <div class="banner success">
+          <i class="bx bx-check-shield" style="color: var(--green)"></i>
+          Dataset aktif:&nbsp;<span class="chip">{{ dataset_source }}</span>
+          <span style="font-weight: 400; color: #166534"
+            >&nbsp;(hasil preprocessing)</span
+          >
+        </div>
+        {% else %}
+        <div class="banner warning">
+          <i class="bx bx-error-circle" style="color: #d97706"></i>
+          Belum ada data preprocessing. Silakan lakukan
+          <a href="{{ url_for('hasil') }}">&nbsp;Preprocessing&nbsp;</a>
+          terlebih dahulu.
+        </div>
+        {% endif %}
+
+        <!-- ══ MAIN GRID ══ -->
+        <div class="klas-grid">
+          <!-- ── KOLOM KIRI ── -->
+          <div class="left-col">
+            <!-- Distribusi Data -->
+            <div class="card">
+              <div class="card-head">
+                <i class="bx bx-bar-chart-alt-2"></i>Distribusi Data
+              </div>
+              <div class="stat-row">
+                <div class="stat-item tot">
+                  <div class="stat-val">{{ total_data }}</div>
+                  <div class="stat-lbl">Total</div>
+                </div>
+                <div class="stat-item pos">
+                  <div class="stat-val">{{ positif }}</div>
+                  <div class="stat-lbl">Positif</div>
+                </div>
+                <div class="stat-item neg">
+                  <div class="stat-val">{{ negatif }}</div>
+                  <div class="stat-lbl">Negatif</div>
+                </div>
+                <div class="stat-item net">
+                  <div class="stat-val">{{ netral }}</div>
+                  <div class="stat-lbl">Netral</div>
+                </div>
+              </div>
+              {% if total_data > 0 %}
+              <div class="chart-wrap">
+                <canvas id="sentimenChart"></canvas>
+              </div>
+              {% endif %}
+            </div>
+
+            <!-- Konfigurasi Training -->
+            <div class="card">
+              <div class="card-head">
+                <i class="bx bx-slider-alt"></i>Konfigurasi Training
+              </div>
+              <form
+                action="{{ url_for('klasifikasi') }}"
+                method="POST"
+                id="formTrain"
+              >
+                <div class="form-row">
+                  <div class="form-group">
+                    <label>Rasio Train / Validasi</label>
+                    <select name="rasio" id="selectRasio">
+                      <option value="0.2">80% Train / 20% Validasi</option>
+                      <option value="0.3">70% Train / 30% Validasi</option>
+                    </select>
+                  </div>
+                  <button
+                    type="submit"
+                    class="btn-train"
+                    id="btnTrain"
+                    {%
+                    if
+                    not
+                    dataset_source
+                    %}disabled{%
+                    endif
+                    %}
+                  >
+                    <i class="bx bx-play-circle"></i> Mulai Training
+                  </button>
+                </div>
+                <p class="form-note">
+                  Algoritma: <b>Complement Naive Bayes</b> +
+                  <b>Balanced Sample Weight</b> &nbsp;·&nbsp; Fitur:
+                  <b>TF-IDF</b> (max 10000, ngram 1–3) &nbsp;·&nbsp; Evaluasi:
+                  <b>5-Fold Stratified CV</b>
+                </p>
+              </form>
+
+              <!-- Split Result -->
+              {% if jumlah_train or jumlah_test %}
+              <div class="split-row">
+                <div class="split-card trn">
+                  <div class="split-val">{{ jumlah_train }}</div>
+                  <div class="split-lbl">Data Training</div>
+                </div>
+                <div class="split-card tst">
+                  <div class="split-val">{{ jumlah_test }}</div>
+                  <div class="split-lbl">Data Validasi</div>
+                </div>
+              </div>
+              {% endif %}
+            </div>
+
+            <!-- Akurasi -->
+            {% if akurasi %}
+            <div class="card">
+              <div class="card-head">
+                <i class="bx bx-trophy"></i>Hasil Training
+              </div>
+              <div class="akurasi-box">
+                <div>
+                  <div class="akurasi-num">{{ akurasi }}%</div>
+                  <div class="akurasi-lbl">Akurasi 5-Fold Cross Validation</div>
+                </div>
+                <i class="bx bx-medal akurasi-icon"></i>
+              </div>
+              {% if dist %}
+              <div style="margin-top: 12px">
+                <p
+                  style="
+                    font-size: 0.78em;
+                    color: #64748b;
+                    margin-bottom: 6px;
+                    font-weight: 600;
+                  "
+                >
+                  DISTRIBUSI DATA TRAINING
+                </p>
+                <div style="display: flex; gap: 6px; flex-wrap: wrap">
+                  {% for lbl, jml in dist.items() %}
+                  <div
+                    style="flex:1; min-width:70px; padding:8px; border-radius:8px; text-align:center;
+                    background:{% if lbl=='positif' %}#f0fdf4{% elif lbl=='negatif' %}#fef2f2{% else %}#fff7ed{% endif %};
+                    border:1px solid {% if lbl=='positif' %}#bbf7d0{% elif lbl=='negatif' %}#fecaca{% else %}#fed7aa{% endif %};"
+                  >
+                    <div
+                      style="font-weight:800; font-size:1.1em;
+                      color:{% if lbl=='positif' %}#15803d{% elif lbl=='negatif' %}#dc2626{% else %}#ea580c{% endif %};"
+                    >
+                      {{ jml }}
+                    </div>
+                    <div
+                      style="
+                        font-size: 0.75em;
+                        color: #64748b;
+                        text-transform: capitalize;
+                      "
+                    >
+                      {{ lbl }}
+                    </div>
+                  </div>
+                  {% endfor %}
+                </div>
+                {% set total_dist = dist.values()|list|sum %} {% if total_dist >
+                0 %}
+                <p
+                  style="
+                    font-size: 0.75em;
+                    color: #94a3b8;
+                    margin-top: 8px;
+                    font-style: italic;
+                  "
+                >
+                  {% for lbl, jml in dist.items() %} {{ lbl|capitalize }}: {{
+                  ((jml/total_dist)*100)|round(1) }}% {% endfor %}
+                </p>
+                {% endif %}
+              </div>
+              {% endif %}
+            </div>
+            {% endif %}
+          </div>
+          <!-- /left -->
+
+          <!-- ── KOLOM KANAN ── -->
+          <div class="right-col">
+            <!-- Confusion Matrix -->
+            {% if cm_data %}
+            <div class="card">
+              <div class="card-head">
+                <i class="bx bx-grid"></i>Confusion Matrix
+              </div>
+              <p
+                style="
+                  font-size: 0.8em;
+                  color: var(--gray);
+                  margin-bottom: 12px;
+                "
+              >
+                <b>Baris</b> = Label Aktual &nbsp;·&nbsp; <b>Kolom</b> = Label
+                Prediksi &nbsp;·&nbsp;
+                <span
+                  style="
+                    background: #dcfce7;
+                    padding: 1px 7px;
+                    border-radius: 4px;
+                    color: #14532d;
+                    font-weight: 700;
+                  "
+                  >Hijau</span
+                >
+                = benar &nbsp;
+                <span
+                  style="
+                    background: #fee2e2;
+                    padding: 1px 7px;
+                    border-radius: 4px;
+                    color: #7f1d1d;
+                    font-weight: 700;
+                  "
+                  >Merah</span
+                >
+                = salah
+              </p>
+              <div class="cm-wrap">
+                <table class="cm-table">
+                  <thead>
+                    <tr>
+                      <th>Aktual ╲ Prediksi</th>
+                      {% for lbl in cm_labels %}
+                      <th>
+                        <span
+                          class="badge {% if lbl=='positif' %}badge-pos{% elif lbl=='negatif' %}badge-neg{% else %}badge-net{% endif %}"
+                        >
+                          {{ lbl|capitalize }}
+                        </span>
+                      </th>
+                      {% endfor %}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {% for i, row in cm_data %}
+                    <tr>
+                      <td class="lbl">
+                        <span
+                          class="badge {% if cm_labels[i]=='positif' %}badge-pos{% elif cm_labels[i]=='negatif' %}badge-neg{% else %}badge-net{% endif %}"
+                        >
+                          {{ cm_labels[i]|capitalize }}
+                        </span>
+                      </td>
+                      {% for j in range(row|length) %}
+                      <td
+                        class="{% if i==j %}diag{% elif row[j]>0 %}off-cell{% else %}zero{% endif %}"
+                      >
+                        {{ row[j] }}
+                      </td>
+                      {% endfor %}
+                    </tr>
+                    {% endfor %}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+            {% endif %}
+
+            <!-- Classification Report -->
+            {% if report_data %}
+            <div class="card" style="margin-top: 16px">
+              <div class="card-head">
+                <i class="bx bx-list-check"></i>Classification Report
+              </div>
+              <table class="report-table">
+                <thead>
+                  <tr>
+                    <th>Label</th>
+                    <th>Precision</th>
+                    <th>Recall</th>
+                    <th>F1-Score</th>
+                    <th>Support</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {% for r in report_data %}
+                  <tr>
+                    <td>
+                      <span
+                        class="badge {% if r.label=='positif' %}badge-pos{% elif r.label=='negatif' %}badge-neg{% else %}badge-net{% endif %}"
+                      >
+                        {{ r.label|capitalize }}
+                      </span>
+                    </td>
+                    <td>
+                      <div class="prog-wrap">
+                        <span style="font-weight: 700">{{ r.precision }}%</span>
+                        <div class="prog-bar">
+                          <div
+                            class="prog-fill"
+                            style="width:{{ r.precision }}%;
+                                   background:{% if r.label=='positif' %}#16a34a{% elif r.label=='negatif' %}#dc2626{% else %}#ea580c{% endif %};"
+                          ></div>
+                        </div>
+                      </div>
+                    </td>
+                    <td>
+                      <div class="prog-wrap">
+                        <span style="font-weight: 700">{{ r.recall }}%</span>
+                        <div class="prog-bar">
+                          <div
+                            class="prog-fill"
+                            style="width:{{ r.recall }}%;
+                                   background:{% if r.label=='positif' %}#16a34a{% elif r.label=='negatif' %}#dc2626{% else %}#ea580c{% endif %};"
+                          ></div>
+                        </div>
+                      </div>
+                    </td>
+                    <td>
+                      <div class="prog-wrap">
+                        <b style="font-size: 1.05em">{{ r.f1 }}%</b>
+                        <div class="prog-bar">
+                          <div
+                            class="prog-fill"
+                            style="width:{{ r.f1 }}%;
+                                   background:{% if r.label=='positif' %}#2563eb{% elif r.label=='negatif' %}#7c3aed{% else %}#0d9488{% endif %};"
+                          ></div>
+                        </div>
+                      </div>
+                    </td>
+                    <td style="font-weight: 700; color: var(--gray)">
+                      {{ r.support }}
+                    </td>
+                  </tr>
+                  {% endfor %}
+                </tbody>
+              </table>
+              <p
+                style="
+                  font-size: 0.75em;
+                  color: var(--gray);
+                  margin-top: 10px;
+                  font-style: italic;
+                "
+              >
+                * Support = jumlah data uji per kelas &nbsp;·&nbsp; F1-Score =
+                harmonik mean precision &amp; recall
+              </p>
+            </div>
+            {% endif %}
+
+            <!-- Empty State (sebelum training) -->
+            {% if not cm_data and not report_data %}
+            <div class="card">
+              <div class="empty-state">
+                <i class="bx bx-brain" style="color: #d1d5db"></i>
+                <p>
+                  Confusion matrix dan classification report<br />akan tampil
+                  setelah training dijalankan.
+                </p>
+              </div>
+            </div>
+            {% endif %}
+          </div>
+          <!-- /right -->
+        </div>
+        <!-- /grid -->
+      </div>
+    </section>
+
+    <script>
+      // Sidebar toggle
+      document.querySelector('.sidebarBtn').onclick = function() {
+        document.querySelector('.sidebar').classList.toggle('active');
+      };
+
+      // Disable button saat submit
+      document.getElementById('formTrain').addEventListener('submit', function() {
+        const btn = document.getElementById('btnTrain');
+        btn.disabled = true;
+        btn.innerHTML = '<span class="spinner"></span>&nbsp; Training...';
+      });
+
+      // Doughnut chart distribusi
+      {% if total_data > 0 %}
+      const ctx = document.getElementById('sentimenChart').getContext('2d');
+      new Chart(ctx, {
+        type: 'doughnut',
+        data: {
+          labels: ['Positif', 'Negatif', 'Netral'],
+          datasets: [{
+            data: [{{ positif }}, {{ negatif }}, {{ netral }}],
+            backgroundColor: ['#16a34a', '#dc2626', '#ea580c'],
+            borderColor: ['#fff', '#fff', '#fff'],
+            borderWidth: 3,
+            hoverOffset: 8,
+          }],
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          cutout: '65%',
+          plugins: {
+            legend: {
+              position: 'bottom',
+              labels: { font: { size: 12, weight: 'bold' }, padding: 16 },
+            },
+            tooltip: {
+              callbacks: {
+                label: function(ctx) {
+                  const total = ctx.dataset.data.reduce((a, b) => a + b, 0);
+                  const pct = total > 0 ? ((ctx.parsed / total) * 100).toFixed(1) : 0;
+                  return ` ${ctx.label}: ${ctx.parsed} data (${pct}%)`;
+                },
+              },
+            },
+          },
+        },
+      });
+      {% endif %}
+    </script>
+  </body>
+</html>

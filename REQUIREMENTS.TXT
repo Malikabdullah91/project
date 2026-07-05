@@ -1,0 +1,8 @@
+flask
+flask_sqlalchemy
+pandas
+scikit-learn
+numpy
+Sastrawi
+pymysql
+werkzeug

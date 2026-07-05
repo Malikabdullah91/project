@@ -1,0 +1,2430 @@
+<!doctype html>
+<html lang="id">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Analisis Sentimen Investasi Emas Digital — Naive Bayes</title>
+    <link
+      href="https://fonts.googleapis.com/css2?family=Lora:ital,wght@0,400;0,600;1,400&family=DM+Sans:opsz,wght@9..40,300;9..40,400;9..40,500&display=swap"
+      rel="stylesheet"
+    />
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+    <style>
+      :root {
+        --gold: #c9913a;
+        --gold-l: #f0c97a;
+        --gold-pale: #fdf6e8;
+        --gold-d: #9a6a1f;
+        --ink: #1a1714;
+        --ink-s: #4a4540;
+        --ink-m: #9a9490;
+        --white: #ffffff;
+        --surface: #fafaf8;
+        --border: #ede9e0;
+        --pos: #1e6b3e;
+        --neg: #b83025;
+        --neu: #3d5a80;
+        --pos-bg: #eaf6ef;
+        --neg-bg: #fdecea;
+        --neu-bg: #ebf0f7;
+        --radius: 12px;
+        --shadow: 0 2px 16px rgba(0, 0, 0, 0.07);
+      }
+      *,
+      *::before,
+      *::after {
+        box-sizing: border-box;
+        margin: 0;
+        padding: 0;
+      }
+      html {
+        scroll-behavior: smooth;
+      }
+      body {
+        font-family: "DM Sans", sans-serif;
+        background: var(--surface);
+        color: var(--ink);
+        font-size: 16px;
+        line-height: 1.7;
+      }
+
+      /* NAV */
+      nav {
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        z-index: 200;
+        height: 62px;
+        background: rgba(255, 255, 255, 0.93);
+        backdrop-filter: blur(14px);
+        border-bottom: 1px solid var(--border);
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 0 48px;
+      }
+      .nav-brand {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        font-family: "Lora", serif;
+        font-size: 16px;
+        font-weight: 600;
+        color: var(--gold);
+        text-decoration: none;
+      }
+      .nav-brand svg {
+        width: 20px;
+        height: 20px;
+        flex-shrink: 0;
+      }
+      .nav-links {
+        display: flex;
+        gap: 28px;
+      }
+      .nav-links a {
+        font-size: 14px;
+        font-weight: 500;
+        color: var(--ink-s);
+        text-decoration: none;
+        transition: color 0.2s;
+      }
+      .nav-links a:hover {
+        color: var(--gold);
+      }
+      @media (max-width: 768px) {
+        .nav-links {
+          display: none;
+        }
+        nav {
+          padding: 0 20px;
+        }
+      }
+
+      /* HERO */
+      #hero {
+        min-height: 100vh;
+        display: flex;
+        align-items: center;
+        padding: 80px 48px 60px;
+        position: relative;
+        overflow: hidden;
+        background: var(--white);
+      }
+      .hero-mesh {
+        position: absolute;
+        inset: 0;
+        background:
+          radial-gradient(
+            ellipse 70% 55% at 65% 45%,
+            #fef3dc 0%,
+            transparent 65%
+          ),
+          radial-gradient(
+            ellipse 40% 30% at 5% 85%,
+            #f5f0e8 0%,
+            transparent 55%
+          );
+      }
+      .hero-dots {
+        position: absolute;
+        inset: 0;
+        background-image: radial-gradient(
+          var(--border) 1.5px,
+          transparent 1.5px
+        );
+        background-size: 28px 28px;
+        opacity: 0.5;
+      }
+      .hero-inner {
+        position: relative;
+        z-index: 1;
+        max-width: 680px;
+      }
+      .badge {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        background: var(--gold-pale);
+        border: 1px solid #e4c98c;
+        border-radius: 100px;
+        padding: 5px 16px;
+        font-size: 11.5px;
+        font-weight: 500;
+        color: #7a5018;
+        text-transform: uppercase;
+        letter-spacing: 0.9px;
+        margin-bottom: 26px;
+      }
+      .badge::before {
+        content: "";
+        width: 6px;
+        height: 6px;
+        background: var(--gold);
+        border-radius: 50%;
+      }
+      h1 {
+        font-family: "Lora", serif;
+        font-size: clamp(30px, 4vw, 52px);
+        font-weight: 600;
+        line-height: 1.18;
+        color: var(--ink);
+        margin-bottom: 18px;
+        letter-spacing: -0.5px;
+      }
+      h1 em {
+        font-style: italic;
+        color: var(--gold);
+      }
+      .hero-sub {
+        font-size: 16.5px;
+        color: var(--ink-s);
+        line-height: 1.8;
+        max-width: 520px;
+        margin-bottom: 36px;
+      }
+      .hero-meta {
+        display: flex;
+        gap: 28px;
+        flex-wrap: wrap;
+        margin-bottom: 40px;
+        padding-bottom: 32px;
+        border-bottom: 1px solid var(--border);
+      }
+      .hm-item {
+        display: flex;
+        flex-direction: column;
+        gap: 3px;
+      }
+      .hm-label {
+        font-size: 10.5px;
+        text-transform: uppercase;
+        letter-spacing: 1px;
+        color: var(--ink-m);
+        font-weight: 500;
+      }
+      .hm-val {
+        font-size: 13.5px;
+        font-weight: 500;
+        color: var(--ink-s);
+      }
+      .cta-row {
+        display: flex;
+        gap: 12px;
+        flex-wrap: wrap;
+      }
+      .btn {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        padding: 12px 26px;
+        border-radius: 9px;
+        font-size: 14.5px;
+        font-weight: 500;
+        text-decoration: none;
+        border: none;
+        cursor: pointer;
+        transition: all 0.2s;
+      }
+      .btn-gold {
+        background: var(--gold);
+        color: #fff;
+      }
+      .btn-gold:hover {
+        background: var(--gold-d);
+        transform: translateY(-1px);
+      }
+      .btn-outline {
+        background: #fff;
+        color: var(--ink-s);
+        border: 1px solid var(--border);
+      }
+      .btn-outline:hover {
+        border-color: var(--gold);
+        transform: translateY(-1px);
+      }
+
+      /* Stats floating */
+      .hero-stats {
+        position: absolute;
+        right: 48px;
+        top: 50%;
+        transform: translateY(-50%);
+        display: flex;
+        flex-direction: column;
+        gap: 14px;
+        z-index: 1;
+      }
+      .stat-pill {
+        background: #fff;
+        border: 1px solid var(--border);
+        border-radius: 16px;
+        padding: 18px 26px;
+        box-shadow: var(--shadow);
+        text-align: center;
+        min-width: 152px;
+        animation: float 4s ease-in-out infinite;
+      }
+      .stat-pill:nth-child(2) {
+        animation-delay: -1.8s;
+      }
+      .stat-pill:nth-child(3) {
+        animation-delay: -3.2s;
+      }
+      @keyframes float {
+        0%,
+        100% {
+          transform: translateY(0);
+        }
+        50% {
+          transform: translateY(-6px);
+        }
+      }
+      .sp-num {
+        font-family: "Lora", serif;
+        font-size: 28px;
+        font-weight: 600;
+        color: var(--gold);
+        line-height: 1;
+      }
+      .sp-label {
+        font-size: 11.5px;
+        color: var(--ink-m);
+        margin-top: 3px;
+      }
+      @media (max-width: 900px) {
+        .hero-stats {
+          display: none;
+        }
+      }
+
+      /* SECTIONS */
+      section {
+        padding: 80px 48px;
+      }
+      @media (max-width: 768px) {
+        section {
+          padding: 60px 20px;
+        }
+      }
+      .sec-tag {
+        font-size: 11px;
+        text-transform: uppercase;
+        letter-spacing: 1.5px;
+        color: var(--gold);
+        font-weight: 500;
+        margin-bottom: 10px;
+      }
+      h2 {
+        font-family: "Lora", serif;
+        font-size: clamp(22px, 3vw, 36px);
+        font-weight: 600;
+        line-height: 1.25;
+        letter-spacing: -0.3px;
+        color: var(--ink);
+        margin-bottom: 12px;
+      }
+      .sec-desc {
+        font-size: 15.5px;
+        color: var(--ink-s);
+        max-width: 540px;
+        line-height: 1.8;
+        margin-bottom: 48px;
+      }
+
+      /* PROFIL */
+      #profil {
+        background: var(--white);
+      }
+      .profil-grid {
+        display: grid;
+        grid-template-columns: repeat(2, 1fr);
+        gap: 16px;
+        max-width: 860px;
+      }
+      .profil-grid .full {
+        grid-column: 1/-1;
+      }
+      @media (max-width: 600px) {
+        .profil-grid {
+          grid-template-columns: 1fr;
+        }
+      }
+      .pc {
+        background: var(--surface);
+        border: 1px solid var(--border);
+        border-radius: var(--radius);
+        padding: 24px 28px;
+      }
+      .pc-lbl {
+        font-size: 10.5px;
+        text-transform: uppercase;
+        letter-spacing: 1px;
+        color: var(--ink-m);
+        font-weight: 500;
+        margin-bottom: 8px;
+      }
+      .pc-val {
+        font-size: 14.5px;
+        color: var(--ink);
+        line-height: 1.6;
+      }
+      .tags {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+        margin-top: 6px;
+      }
+      .tag {
+        background: var(--gold-pale);
+        border: 1px solid #e4c98c;
+        border-radius: 6px;
+        padding: 4px 12px;
+        font-size: 12.5px;
+        color: #7a5018;
+        font-weight: 500;
+      }
+
+      /* METODOLOGI */
+      #metodologi {
+        background: var(--gold-pale);
+      }
+      .flow {
+        display: flex;
+        flex-direction: column;
+        gap: 0;
+        max-width: 660px;
+      }
+      .fl-step {
+        display: flex;
+        gap: 22px;
+        padding-bottom: 28px;
+      }
+      .fl-step:last-child {
+        padding-bottom: 0;
+      }
+      .fl-left {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+      }
+      .fl-num {
+        width: 42px;
+        height: 42px;
+        min-width: 42px;
+        border-radius: 50%;
+        background: var(--gold);
+        color: #fff;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-family: "Lora", serif;
+        font-size: 17px;
+        font-weight: 600;
+      }
+      .fl-line {
+        width: 2px;
+        flex: 1;
+        min-height: 20px;
+        background: #e4c98c;
+        margin-top: 8px;
+      }
+      .fl-step:last-child .fl-line {
+        display: none;
+      }
+      .fl-body {
+        padding-top: 9px;
+      }
+      .fl-title {
+        font-size: 16px;
+        font-weight: 500;
+        color: var(--ink);
+        margin-bottom: 4px;
+      }
+      .fl-desc {
+        font-size: 13.5px;
+        color: var(--ink-s);
+        line-height: 1.65;
+      }
+
+      /* VISUALISASI */
+      #visualisasi {
+        background: var(--surface);
+      }
+      .tabs {
+        display: flex;
+        border: 1px solid var(--border);
+        border-radius: 10px;
+        overflow: hidden;
+        width: fit-content;
+        background: #fff;
+        margin-bottom: 36px;
+      }
+      .tab-btn {
+        padding: 9px 22px;
+        font-size: 13.5px;
+        font-weight: 500;
+        color: var(--ink-m);
+        cursor: pointer;
+        border: none;
+        background: none;
+        transition: all 0.2s;
+        border-right: 1px solid var(--border);
+      }
+      .tab-btn:last-child {
+        border-right: none;
+      }
+      .tab-btn.active {
+        background: var(--gold);
+        color: #fff;
+      }
+      .tab-panel {
+        display: none;
+      }
+      .tab-panel.active {
+        display: block;
+      }
+      .charts-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 20px;
+      }
+      @media (max-width: 700px) {
+        .charts-grid {
+          grid-template-columns: 1fr;
+        }
+      }
+      .chart-card {
+        background: #fff;
+        border: 1px solid var(--border);
+        border-radius: var(--radius);
+        padding: 26px;
+      }
+      .chart-card h3 {
+        font-family: "Lora", serif;
+        font-size: 16px;
+        font-weight: 600;
+        color: var(--ink);
+        margin-bottom: 18px;
+      }
+      .chart-wrap {
+        position: relative;
+        height: 250px;
+      }
+      .metrics-list {
+        display: flex;
+        flex-direction: column;
+        gap: 18px;
+      }
+      .m-row {
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+      }
+      .m-top {
+        display: flex;
+        justify-content: space-between;
+      }
+      .m-name {
+        font-size: 13.5px;
+        font-weight: 500;
+        color: var(--ink-s);
+      }
+      .m-val {
+        font-size: 14px;
+        font-weight: 600;
+        color: var(--ink);
+        font-family: "Lora", serif;
+      }
+      .m-bar {
+        height: 8px;
+        background: var(--border);
+        border-radius: 100px;
+        overflow: hidden;
+      }
+      .m-fill {
+        height: 100%;
+        border-radius: 100px;
+        background: linear-gradient(90deg, var(--gold-l), var(--gold));
+        transition: width 1.2s cubic-bezier(0.4, 0, 0.2, 1);
+      }
+
+      /* Confusion Matrix */
+      .cm-wrap {
+        overflow-x: auto;
+      }
+      .cm-table {
+        border-collapse: collapse;
+        margin: 0 auto;
+      }
+      .cm-table th {
+        font-size: 12px;
+        color: var(--ink-m);
+        font-weight: 500;
+        padding: 6px 10px;
+        text-align: center;
+      }
+      .cm-table .side-th {
+        writing-mode: vertical-lr;
+        transform: rotate(180deg);
+        white-space: nowrap;
+      }
+      .cm-cell {
+        width: 88px;
+        height: 88px;
+        border-radius: 10px;
+        text-align: center;
+        font-family: "Lora", serif;
+        font-size: 26px;
+        font-weight: 600;
+        vertical-align: middle;
+      }
+      .cm-sub {
+        font-size: 11px;
+        font-weight: 400;
+        font-family: "DM Sans", sans-serif;
+        display: block;
+        opacity: 0.7;
+        margin-top: 2px;
+      }
+      .c-hi {
+        background: #1a5c36;
+        color: #fff;
+      }
+      .c-mid {
+        background: #d4edda;
+        color: #1a5c36;
+      }
+      .c-lo {
+        background: #fdecea;
+        color: #b83025;
+      }
+      .c-zero {
+        background: #f5f4f0;
+        color: var(--ink-m);
+      }
+      .cm-note {
+        font-size: 12.5px;
+        color: var(--ink-m);
+        margin-top: 14px;
+        line-height: 1.6;
+        max-width: 480px;
+      }
+
+      /* CV */
+      .cv-stats {
+        display: flex;
+        gap: 28px;
+        margin-bottom: 20px;
+      }
+      .cv-s-num {
+        font-family: "Lora", serif;
+        font-size: 26px;
+        font-weight: 600;
+        color: var(--gold);
+      }
+      .cv-s-lbl {
+        font-size: 12px;
+        color: var(--ink-m);
+      }
+
+      /* DEMO */
+      #demo {
+        background: var(--white);
+      }
+      .demo-wrap {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 28px;
+        max-width: 980px;
+      }
+      @media (max-width: 768px) {
+        .demo-wrap {
+          grid-template-columns: 1fr;
+        }
+      }
+
+      /* Input panel */
+      .demo-panel {
+        background: var(--surface);
+        border: 1px solid var(--border);
+        border-radius: 18px;
+        padding: 30px;
+      }
+      .panel-lbl {
+        font-size: 11px;
+        text-transform: uppercase;
+        letter-spacing: 1px;
+        color: var(--ink-m);
+        font-weight: 500;
+        margin-bottom: 12px;
+        display: block;
+      }
+      .demo-textarea {
+        width: 100%;
+        min-height: 120px;
+        border: 1px solid var(--border);
+        border-radius: 10px;
+        padding: 14px 16px;
+        font-family: "DM Sans", sans-serif;
+        font-size: 14.5px;
+        color: var(--ink);
+        background: #fff;
+        resize: vertical;
+        outline: none;
+        line-height: 1.6;
+        transition: border-color 0.2s;
+      }
+      .demo-textarea:focus {
+        border-color: var(--gold);
+      }
+      .ex-label {
+        font-size: 11px;
+        text-transform: uppercase;
+        letter-spacing: 0.8px;
+        color: var(--ink-m);
+        margin: 14px 0 8px;
+        display: block;
+      }
+      .ex-chips {
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+      }
+      .ex-chip {
+        background: #fff;
+        border: 1px solid var(--border);
+        border-radius: 8px;
+        padding: 8px 14px;
+        font-size: 13px;
+        color: var(--ink-s);
+        cursor: pointer;
+        text-align: left;
+        transition: all 0.15s;
+        font-family: "DM Sans", sans-serif;
+      }
+      .ex-chip:hover {
+        border-color: var(--gold);
+        color: var(--gold);
+        background: var(--gold-pale);
+      }
+      .btn-row {
+        display: flex;
+        gap: 10px;
+        align-items: center;
+        margin-top: 18px;
+        flex-wrap: wrap;
+      }
+      .loader {
+        display: none;
+        gap: 5px;
+        align-items: center;
+      }
+      .loader.show {
+        display: flex;
+      }
+      .dot {
+        width: 7px;
+        height: 7px;
+        background: var(--gold);
+        border-radius: 50%;
+        animation: dotb 1.2s infinite;
+      }
+      .dot:nth-child(2) {
+        animation-delay: 0.2s;
+      }
+      .dot:nth-child(3) {
+        animation-delay: 0.4s;
+      }
+      @keyframes dotb {
+        0%,
+        80%,
+        100% {
+          transform: translateY(0);
+        }
+        40% {
+          transform: translateY(-7px);
+        }
+      }
+
+      /* Preprocessing stepper */
+      #prep-section {
+        margin-top: 20px;
+        display: none;
+      }
+      #prep-section.show {
+        display: block;
+      }
+      .prep-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        margin-bottom: 14px;
+      }
+      .prep-title {
+        font-size: 12px;
+        text-transform: uppercase;
+        letter-spacing: 1px;
+        color: var(--ink-m);
+        font-weight: 500;
+      }
+      .prep-progress {
+        font-size: 12px;
+        color: var(--ink-m);
+      }
+      .steps-wrap {
+        display: flex;
+        flex-direction: column;
+        gap: 0;
+      }
+      .step-item {
+        border: 1px solid var(--border);
+        border-radius: 10px;
+        overflow: hidden;
+        margin-bottom: 8px;
+        background: #fff;
+        transition: box-shadow 0.2s;
+      }
+      .step-item.done {
+        border-color: #c8e6c9;
+      }
+      .step-item.active-step {
+        box-shadow: 0 0 0 2px var(--gold);
+        border-color: var(--gold);
+      }
+      .step-head {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        padding: 12px 16px;
+        cursor: pointer;
+      }
+      .step-num {
+        width: 28px;
+        height: 28px;
+        min-width: 28px;
+        border-radius: 50%;
+        background: var(--border);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 12px;
+        font-weight: 600;
+        color: var(--ink-m);
+        transition: all 0.3s;
+      }
+      .step-item.done .step-num {
+        background: var(--pos);
+        color: #fff;
+      }
+      .step-item.active-step .step-num {
+        background: var(--gold);
+        color: #fff;
+      }
+      .step-name {
+        font-size: 13.5px;
+        font-weight: 500;
+        color: var(--ink);
+        flex: 1;
+      }
+      .step-status {
+        font-size: 11px;
+        color: var(--ink-m);
+      }
+      .step-item.done .step-status {
+        color: var(--pos);
+      }
+      .step-body {
+        display: none;
+        padding: 0 16px 14px;
+        border-top: 1px solid var(--border);
+      }
+      .step-item.done .step-body,
+      .step-item.active-step .step-body {
+        display: block;
+      }
+      .step-detail {
+        font-size: 12px;
+        color: var(--ink-m);
+        margin-bottom: 8px;
+        background: var(--gold-pale);
+        border-radius: 6px;
+        padding: 7px 10px;
+      }
+      .step-io {
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+      }
+      .io-row {
+        display: flex;
+        gap: 8px;
+        align-items: flex-start;
+        font-size: 12.5px;
+      }
+      .io-badge {
+        font-size: 10px;
+        font-weight: 600;
+        letter-spacing: 0.5px;
+        text-transform: uppercase;
+        padding: 2px 7px;
+        border-radius: 4px;
+        min-width: 40px;
+        text-align: center;
+        margin-top: 2px;
+      }
+      .io-in {
+        background: #ede9e0;
+        color: var(--ink-m);
+      }
+      .io-out {
+        background: #d4edda;
+        color: #1a5c36;
+      }
+      .io-text {
+        color: var(--ink-s);
+        line-height: 1.5;
+        word-break: break-all;
+      }
+      .token-list {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 4px;
+      }
+      .token {
+        background: var(--gold-pale);
+        border: 1px solid #e4c98c;
+        border-radius: 4px;
+        padding: 2px 8px;
+        font-size: 12px;
+        color: #7a5018;
+      }
+
+      /* Step nav buttons */
+      .step-nav {
+        display: flex;
+        gap: 8px;
+        margin-top: 14px;
+        flex-wrap: wrap;
+      }
+      .step-btn {
+        padding: 8px 18px;
+        border-radius: 8px;
+        font-size: 13px;
+        font-weight: 500;
+        cursor: pointer;
+        border: none;
+        font-family: "DM Sans", sans-serif;
+        transition: all 0.2s;
+      }
+      .step-btn-next {
+        background: var(--gold);
+        color: #fff;
+      }
+      .step-btn-next:hover {
+        background: var(--gold-d);
+      }
+      .step-btn-next:disabled {
+        background: var(--border);
+        color: var(--ink-m);
+        cursor: not-allowed;
+      }
+      .step-btn-reset {
+        background: #fff;
+        color: var(--ink-s);
+        border: 1px solid var(--border);
+      }
+      .step-btn-reset:hover {
+        border-color: var(--neg);
+        color: var(--neg);
+      }
+
+      /* Result panel */
+      .result-panel {
+        display: flex;
+        flex-direction: column;
+        gap: 16px;
+      }
+      .result-card {
+        background: var(--surface);
+        border: 1px solid var(--border);
+        border-radius: 18px;
+        padding: 26px 28px;
+        display: none;
+      }
+      .result-card.show {
+        display: block;
+      }
+      .r-label {
+        font-size: 11px;
+        text-transform: uppercase;
+        letter-spacing: 1px;
+        color: var(--ink-m);
+        margin-bottom: 14px;
+        font-weight: 500;
+      }
+      .r-badge {
+        display: inline-flex;
+        align-items: center;
+        gap: 9px;
+        padding: 10px 20px;
+        border-radius: 100px;
+        font-size: 15px;
+        font-weight: 600;
+        margin-bottom: 18px;
+      }
+      .r-badge::before {
+        content: "";
+        width: 9px;
+        height: 9px;
+        border-radius: 50%;
+      }
+      .r-badge.positif {
+        background: var(--pos-bg);
+        color: var(--pos);
+      }
+      .r-badge.positif::before {
+        background: var(--pos);
+      }
+      .r-badge.negatif {
+        background: var(--neg-bg);
+        color: var(--neg);
+      }
+      .r-badge.negatif::before {
+        background: var(--neg);
+      }
+      .r-badge.netral {
+        background: var(--neu-bg);
+        color: var(--neu);
+      }
+      .r-badge.netral::before {
+        background: var(--neu);
+      }
+      .prob-list {
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+      }
+      .prob-row {
+        display: flex;
+        flex-direction: column;
+        gap: 5px;
+      }
+      .prob-top {
+        display: flex;
+        justify-content: space-between;
+        font-size: 13px;
+      }
+      .prob-name {
+        font-weight: 500;
+        color: var(--ink-s);
+      }
+      .prob-num {
+        color: var(--ink-m);
+      }
+      .prob-bar {
+        height: 7px;
+        background: var(--border);
+        border-radius: 100px;
+        overflow: hidden;
+      }
+      .prob-fill {
+        height: 100%;
+        border-radius: 100px;
+        transition: width 0.9s ease;
+      }
+      .pf-pos {
+        background: var(--pos);
+      }
+      .pf-neg {
+        background: var(--neg);
+      }
+      .pf-neu {
+        background: var(--neu);
+      }
+      .teks-bersih-box {
+        background: var(--gold-pale);
+        border: 1px solid #e4c98c;
+        border-radius: 8px;
+        padding: 12px 14px;
+        font-size: 12.5px;
+        color: var(--ink-s);
+        line-height: 1.6;
+        margin-top: 14px;
+        word-break: break-all;
+      }
+      .teks-bersih-lbl {
+        font-size: 10.5px;
+        text-transform: uppercase;
+        letter-spacing: 0.8px;
+        color: var(--ink-m);
+        margin-bottom: 5px;
+        font-weight: 500;
+      }
+      .r-input-box {
+        background: var(--surface);
+        border: 1px solid var(--border);
+        border-radius: 8px;
+        padding: 10px 14px;
+        font-size: 14px;
+        color: var(--ink);
+        line-height: 1.6;
+        font-style: italic;
+        margin-bottom: 4px;
+      }
+      .r-source {
+        display: inline-flex;
+        align-items: center;
+        font-size: 12.5px;
+        padding: 5px 12px;
+        border-radius: 100px;
+        margin-top: 6px;
+        font-weight: 500;
+      }
+      .r-source-rule {
+        background: #fffbeb;
+        color: #92400e;
+        border: 1px solid #fcd34d;
+      }
+      .r-source-model {
+        background: var(--neu-bg);
+        color: var(--neu);
+        border: 1px solid #bfdbfe;
+      }
+
+      /* CEK KALIMAT */
+      #cek-kalimat {
+        background: var(--gold-pale);
+      }
+      .ck-wrap {
+        max-width: 720px;
+      }
+      .ck-form-box {
+        background: #fff;
+        border: 1px solid var(--border);
+        border-radius: 18px;
+        padding: 32px 36px;
+        box-shadow: var(--shadow);
+      }
+      .ck-textarea {
+        width: 100%;
+        min-height: 130px;
+        border: 1.5px solid var(--border);
+        border-radius: 10px;
+        padding: 16px 18px;
+        font-family: "DM Sans", sans-serif;
+        font-size: 15px;
+        color: var(--ink);
+        background: var(--surface);
+        resize: vertical;
+        outline: none;
+        line-height: 1.7;
+        transition: border-color 0.2s;
+        margin-bottom: 16px;
+      }
+      .ck-textarea:focus {
+        border-color: var(--gold);
+        background: #fff;
+      }
+      .ck-btn-row {
+        display: flex;
+        align-items: center;
+        gap: 14px;
+        flex-wrap: wrap;
+      }
+      .ck-btn {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        padding: 13px 30px;
+        background: var(--gold);
+        color: #fff;
+        border: none;
+        border-radius: 10px;
+        font-family: "DM Sans", sans-serif;
+        font-size: 15px;
+        font-weight: 500;
+        cursor: pointer;
+        transition: all 0.2s;
+      }
+      .ck-btn:hover {
+        background: var(--gold-d);
+        transform: translateY(-1px);
+      }
+      .ck-btn:disabled {
+        background: var(--border);
+        color: var(--ink-m);
+        cursor: not-allowed;
+        transform: none;
+      }
+      .ck-loader {
+        display: none;
+        gap: 6px;
+        align-items: center;
+      }
+      .ck-loader.show {
+        display: inline-flex;
+      }
+      .ck-result {
+        display: none;
+        margin-top: 28px;
+        padding-top: 24px;
+        border-top: 1px solid var(--border);
+        animation: ckFadeIn 0.4s ease;
+      }
+      .ck-result.show {
+        display: block;
+      }
+      @keyframes ckFadeIn {
+        from {
+          opacity: 0;
+          transform: translateY(10px);
+        }
+        to {
+          opacity: 1;
+          transform: none;
+        }
+      }
+      .ck-sec-lbl {
+        font-size: 11px;
+        text-transform: uppercase;
+        letter-spacing: 1px;
+        color: var(--ink-m);
+        font-weight: 500;
+        margin-bottom: 8px;
+      }
+      .ck-kalimat-asli {
+        background: var(--surface);
+        border: 1px solid var(--border);
+        border-radius: 8px;
+        padding: 10px 14px;
+        font-size: 14px;
+        color: var(--ink);
+        font-style: italic;
+        margin-bottom: 20px;
+      }
+      .ck-badge {
+        display: inline-flex;
+        align-items: center;
+        gap: 10px;
+        padding: 12px 28px;
+        border-radius: 100px;
+        font-size: 19px;
+        font-weight: 700;
+        letter-spacing: 0.5px;
+        text-transform: uppercase;
+        animation: ckPop 0.35s cubic-bezier(0.34, 1.56, 0.64, 1);
+      }
+      @keyframes ckPop {
+        from {
+          transform: scale(0.7);
+          opacity: 0;
+        }
+        to {
+          transform: scale(1);
+          opacity: 1;
+        }
+      }
+      .ck-badge::before {
+        content: "";
+        width: 11px;
+        height: 11px;
+        border-radius: 50%;
+        flex-shrink: 0;
+      }
+      .ck-badge.positif {
+        background: var(--pos-bg);
+        color: var(--pos);
+        border: 1.5px solid #a8d5b5;
+      }
+      .ck-badge.positif::before {
+        background: var(--pos);
+      }
+      .ck-badge.negatif {
+        background: var(--neg-bg);
+        color: var(--neg);
+        border: 1.5px solid #f5b8b4;
+      }
+      .ck-badge.negatif::before {
+        background: var(--neg);
+      }
+      .ck-badge.netral {
+        background: var(--neu-bg);
+        color: var(--neu);
+        border: 1.5px solid #a8bfd8;
+      }
+      .ck-badge.netral::before {
+        background: var(--neu);
+      }
+      .ck-source-tag {
+        display: inline-flex;
+        align-items: center;
+        font-size: 12px;
+        padding: 5px 14px;
+        border-radius: 100px;
+        font-weight: 500;
+        margin-top: 10px;
+      }
+      .ck-source-tag.rule {
+        background: #fffbeb;
+        color: #92400e;
+        border: 1px solid #fcd34d;
+      }
+      .ck-source-tag.model {
+        background: var(--neu-bg);
+        color: var(--neu);
+        border: 1px solid #bfdbfe;
+      }
+      .ck-divider {
+        border: none;
+        border-top: 1px solid var(--border);
+        margin: 18px 0;
+      }
+      .ck-prob-rows {
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+      }
+      .ck-prob-row {
+        display: flex;
+        flex-direction: column;
+        gap: 5px;
+      }
+      .ck-prob-top {
+        display: flex;
+        justify-content: space-between;
+        font-size: 13px;
+      }
+      .ck-prob-name {
+        font-weight: 500;
+        color: var(--ink-s);
+      }
+      .ck-prob-num {
+        color: var(--ink-m);
+      }
+      .ck-prob-bar {
+        height: 7px;
+        background: var(--border);
+        border-radius: 100px;
+        overflow: hidden;
+      }
+      .ck-prob-fill {
+        height: 100%;
+        border-radius: 100px;
+        transition: width 0.9s ease;
+      }
+      .ck-pf-pos {
+        background: var(--pos);
+      }
+      .ck-pf-neg {
+        background: var(--neg);
+      }
+      .ck-pf-neu {
+        background: var(--neu);
+      }
+      .ck-teks-bersih {
+        background: var(--gold-pale);
+        border: 1px solid #e4c98c;
+        border-radius: 8px;
+        padding: 12px 14px;
+        font-size: 12.5px;
+        color: var(--ink-s);
+        word-break: break-all;
+        margin-top: 4px;
+      }
+      .ck-chips {
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+        margin: 14px 0 18px;
+      }
+      .ck-chip {
+        background: var(--gold-pale);
+        border: 1px solid #e4c98c;
+        border-radius: 8px;
+        padding: 8px 14px;
+        font-size: 13px;
+        color: #7a5018;
+        cursor: pointer;
+        text-align: left;
+        transition: all 0.15s;
+        font-family: "DM Sans", sans-serif;
+      }
+      .ck-chip:hover {
+        background: #f5e4b5;
+        border-color: var(--gold);
+      }
+      .ck-alert {
+        background: #fef2f2;
+        border: 1px solid #fecaca;
+        border-radius: 8px;
+        padding: 12px 16px;
+        font-size: 13.5px;
+        color: #b91c1c;
+        margin-bottom: 16px;
+      }
+      .ck-chip-lbl {
+        font-size: 11px;
+        text-transform: uppercase;
+        letter-spacing: 0.8px;
+        color: var(--ink-m);
+        margin-bottom: 8px;
+        display: block;
+      }
+
+      /* FOOTER */
+      footer {
+        background: var(--ink);
+        color: rgba(255, 255, 255, 0.55);
+        text-align: center;
+        padding: 36px 48px;
+        font-size: 13.5px;
+      }
+      footer strong {
+        color: rgba(255, 255, 255, 0.88);
+      }
+      footer .g {
+        color: var(--gold-l);
+      }
+
+      /* Fade in */
+      .fi {
+        opacity: 0;
+        transform: translateY(18px);
+        transition:
+          opacity 0.6s,
+          transform 0.6s;
+      }
+      .fi.vis {
+        opacity: 1;
+        transform: none;
+      }
+    </style>
+  </head>
+  <body>
+    <!-- NAV -->
+    <nav>
+      <a class="nav-brand" href="#">
+        <svg
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="1.8"
+        >
+          <path
+            d="M12 2L15.5 8.5L22 9.5L17 14.5L18.5 21L12 17.5L5.5 21L7 14.5L2 9.5L8.5 8.5Z"
+          />
+        </svg>
+        Sentimen Emas Digital
+      </a>
+      <div class="nav-links">
+        <a href="#profil">Profil</a>
+        <a href="#metodologi">Metodologi</a>
+        <a href="#visualisasi">Hasil</a>
+        <a href="#demo">Demo</a>
+        <a href="#cek-kalimat">Cek Kalimat</a>
+      </div>
+    </nav>
+
+    <!-- HERO -->
+    <section id="hero">
+      <div class="hero-mesh"></div>
+      <div class="hero-dots"></div>
+      <div class="hero-inner fi">
+        <div class="badge">Skripsi — Teknik Informatika</div>
+        <h1>
+          Analisis Sentimen<br /><em>Investasi Emas Digital</em
+          ><br />Menggunakan Naive Bayes
+        </h1>
+        <p class="hero-sub">
+          Penelitian ini mengklasifikasikan komentar pengguna platform emas
+          digital ke dalam sentimen <strong>positif</strong>,
+          <strong>negatif</strong>, dan <strong>netral</strong> menggunakan
+          Multinomial Naive Bayes dengan preprocessing bahasa Indonesia.
+        </p>
+        <div class="hero-meta">
+          <div class="hm-item">
+            <span class="hm-label">Penulis</span>
+            <span class="hm-val">Malik Abdullah</span>
+          </div>
+          <div class="hm-item">
+            <span class="hm-label">Email</span>
+            <span class="hm-val">malikgtfc8@gmail.com</span>
+          </div>
+          <div class="hm-item">
+            <span class="hm-label">Metode</span>
+            <span class="hm-val">Naive Bayes</span>
+          </div>
+        </div>
+        <div class="cta-row">
+          <a href="#demo" class="btn btn-gold">
+            <svg
+              width="15"
+              height="15"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2.2"
+            >
+              <circle cx="11" cy="11" r="8" />
+              <path d="m21 21-4.35-4.35" />
+            </svg>
+            Coba Demo Prediksi
+          </a>
+          <a href="#visualisasi" class="btn btn-outline">Lihat Hasil →</a>
+        </div>
+      </div>
+      <div class="hero-stats">
+        <div class="stat-pill">
+          <div class="sp-num" id="stat-total">
+            {{ total_data if total_data else "—" }}
+          </div>
+          <div class="sp-label">Total komentar</div>
+        </div>
+        <div class="stat-pill">
+          <div class="sp-num" id="stat-akurasi">
+            {{ "%.2f"|format(akurasi) + "%" if akurasi else "—" }}
+          </div>
+          <div class="sp-label">Akurasi model</div>
+        </div>
+        <div class="stat-pill">
+          <div class="sp-num" id="stat-train">
+            {{ jumlah_train if jumlah_train else "—" }}
+          </div>
+          <div class="sp-label">Data training</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- PROFIL -->
+    <section id="profil">
+      <div class="sec-tag">Profil Penelitian</div>
+      <h2>Tentang Skripsi Ini</h2>
+      <p class="sec-desc">
+        Identitas, tujuan, dan teknologi yang digunakan dalam penelitian
+        analisis sentimen ini.
+      </p>
+      <div class="profil-grid fi">
+        <div class="pc">
+          <div class="pc-lbl">Judul Skripsi</div>
+          <div class="pc-val">
+            Analisis Sentimen Investasi Emas Digital Menggunakan Metode Naive
+            Bayes
+          </div>
+        </div>
+        <div class="pc">
+          <div class="pc-lbl">Mahasiswa</div>
+          <div class="pc-val">
+            Malik Abdullah<br /><small style="color: var(--ink-m)"
+              >malikgtfc8@gmail.com</small
+            >
+          </div>
+        </div>
+        <div class="pc">
+          <div class="pc-lbl">Dataset</div>
+          <div class="pc-val">
+            {{ total_data }} komentar dari platform investasi emas digital
+          </div>
+        </div>
+        <div class="pc">
+          <div class="pc-lbl">Pembagian Data</div>
+          <div class="pc-val">
+            80% Training ({{ jumlah_train }}) / 20% Testing ({{ jumlah_test }})
+            — stratified split
+          </div>
+        </div>
+        <div class="pc">
+          <div class="pc-lbl">Distribusi Kelas</div>
+          <div class="pc-val">
+            <span style="color: var(--pos); font-weight: 500">● Positif</span> —
+            419 data (23,9%)<br />
+            <span style="color: var(--neu); font-weight: 500">● Netral</span> —
+            945 data (54,0%)<br />
+            <span style="color: var(--neg); font-weight: 500">● Negatif</span> —
+            118 data (6,7%)<br />
+            <span style="color: var(--ink-m); font-weight: 500"
+              >● Tidak terlabeli</span
+            >
+            — 270 data
+          </div>
+        </div>
+        <div class="pc">
+          <div class="pc-lbl">Tujuan Penelitian</div>
+          <div class="pc-val">
+            Mengklasifikasikan opini publik terhadap investasi emas digital
+            untuk memahami persepsi pengguna platform tersebut.
+          </div>
+        </div>
+        <div class="pc full">
+          <div class="pc-lbl">Teknologi & Library</div>
+          <div class="tags">
+            <span class="tag">Python 3.12</span><span class="tag">Flask</span>
+            <span class="tag">scikit-learn</span
+            ><span class="tag">PySastrawi</span> <span class="tag">nlp-id</span
+            ><span class="tag">emoji</span> <span class="tag">pandas</span
+            ><span class="tag">TF-IDF Vectorizer</span>
+            <span class="tag">MultinomialNB</span
+            ><span class="tag">Google Colab</span>
+            <span class="tag">pickle</span>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- METODOLOGI -->
+    <section id="metodologi">
+      <div class="sec-tag">Metodologi</div>
+      <h2>Alur Penelitian</h2>
+      <p class="sec-desc">
+        Tahapan lengkap dari pengumpulan data hingga evaluasi model Naive Bayes.
+      </p>
+      <div class="flow fi">
+        <div class="fl-step">
+          <div class="fl-left">
+            <div class="fl-num">1</div>
+            <div class="fl-line"></div>
+          </div>
+          <div class="fl-body">
+            <div class="fl-title">Pengumpulan Data</div>
+            <div class="fl-desc">
+              Mengumpulkan {{ total_data }} komentar dari platform investasi
+              emas digital, disimpan dalam format CSV dengan kolom username dan
+              komentar.
+            </div>
+          </div>
+        </div>
+        <div class="fl-step">
+          <div class="fl-left">
+            <div class="fl-num">2</div>
+            <div class="fl-line"></div>
+          </div>
+          <div class="fl-body">
+            <div class="fl-title">Preprocessing Teks (7 Tahap)</div>
+            <div class="fl-desc">
+              Konversi emoji → Cleaning → Case folding → Normalisasi slang
+              (nlp-id) → Tokenisasi → Hapus stopword → Stemming (PySastrawi).
+              Tiap tahap dapat dicoba secara interaktif di bagian Demo.
+            </div>
+          </div>
+        </div>
+        <div class="fl-step">
+          <div class="fl-left">
+            <div class="fl-num">3</div>
+            <div class="fl-line"></div>
+          </div>
+          <div class="fl-body">
+            <div class="fl-title">Semi-Automatic Labeling</div>
+            <div class="fl-desc">
+              Pemberian label sentimen secara semi-otomatis menggunakan kamus
+              kata positif/negatif dengan aturan deteksi negasi dan kata penguat
+              (amplifier).
+            </div>
+          </div>
+        </div>
+        <div class="fl-step">
+          <div class="fl-left">
+            <div class="fl-num">4</div>
+            <div class="fl-line"></div>
+          </div>
+          <div class="fl-body">
+            <div class="fl-title">Ekstraksi Fitur TF-IDF</div>
+            <div class="fl-desc">
+              Representasi numerik teks menggunakan TF-IDF Vectorizer dengan
+              ngram range (1,2), sublinear TF, dan maksimal 5.000 fitur.
+            </div>
+          </div>
+        </div>
+        <div class="fl-step">
+          <div class="fl-left">
+            <div class="fl-num">5</div>
+            <div class="fl-line"></div>
+          </div>
+          <div class="fl-body">
+            <div class="fl-title">Training Model Naive Bayes</div>
+            <div class="fl-desc">
+              Melatih Multinomial Naive Bayes (alpha=1.0) dalam pipeline sklearn
+              yang mencakup TF-IDF dan classifier sekaligus.
+            </div>
+          </div>
+        </div>
+        <div class="fl-step">
+          <div class="fl-left">
+            <div class="fl-num">6</div>
+            <div class="fl-line"></div>
+          </div>
+          <div class="fl-body">
+            <div class="fl-title">Evaluasi & Validasi</div>
+            <div class="fl-desc">
+              Evaluasi menggunakan akurasi, presisi, recall, F1-score, confusion
+              matrix, dan 5-Fold Stratified Cross Validation untuk validasi
+              robustness model.
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- VISUALISASI -->
+    <section id="visualisasi">
+      <div class="sec-tag">Hasil Penelitian</div>
+      <h2>Visualisasi & Evaluasi Model</h2>
+      <p class="sec-desc">
+        Performa model Naive Bayes pada data testing (20% dari
+        <span id="viz-total">{{ total_data }}</span>
+        komentar).
+      </p>
+
+      <!-- Loading state -->
+      <div id="viz-loading" style="display: none">
+        <div class="dot"></div>
+        <div class="dot"></div>
+        <div class="dot"></div>
+        <span>Memuat data hasil training...</span>
+      </div>
+
+      <!-- Not trained state -->
+      <div
+        id="viz-empty"
+        style="
+          display: none;
+          background: #fff;
+          border: 1px solid var(--border);
+          border-radius: var(--radius);
+          padding: 40px;
+          text-align: center;
+          max-width: 480px;
+        "
+      >
+        <div style="font-size: 36px; margin-bottom: 14px">🔬</div>
+        <div
+          style="
+            font-size: 15px;
+            font-weight: 500;
+            color: var(--ink);
+            margin-bottom: 8px;
+          "
+        >
+          Belum ada hasil training
+        </div>
+        <div style="font-size: 13.5px; color: var(--ink-m)">
+          Silakan login sebagai admin dan jalankan training model di halaman
+          Klasifikasi terlebih dahulu.
+        </div>
+      </div>
+
+      <!-- Content (hidden until loaded) -->
+      <div id="viz-content" style="display: none">
+        <div class="tabs">
+          <button class="tab-btn active" onclick="switchTab('metrik', this)">
+            Metrik
+          </button>
+          <button class="tab-btn" onclick="switchTab('distribusi', this)">
+            Distribusi Data
+          </button>
+          <button class="tab-btn" onclick="switchTab('confusion', this)">
+            Confusion Matrix
+          </button>
+          <button class="tab-btn" onclick="switchTab('cv', this)">
+            Cross Validation
+          </button>
+        </div>
+
+        <!-- Metrik -->
+        <div class="tab-panel active fi" id="tab-metrik">
+          <div class="charts-grid">
+            <div class="chart-card">
+              <h3>Metrik Evaluasi</h3>
+              <div class="metrics-list" id="metrics-list">
+                <!-- diisi JS -->
+              </div>
+            </div>
+            <div class="chart-card">
+              <h3>Performa per Kelas</h3>
+              <div class="chart-wrap"><canvas id="chartKelas"></canvas></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Distribusi -->
+        <div class="tab-panel fi" id="tab-distribusi">
+          <div class="charts-grid">
+            <div class="chart-card">
+              <h3>Jumlah Data per Label</h3>
+              <div class="chart-wrap"><canvas id="chartBar"></canvas></div>
+            </div>
+            <div class="chart-card">
+              <h3>Proporsi Label</h3>
+              <div class="chart-wrap"><canvas id="chartDonut"></canvas></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Confusion Matrix -->
+        <div class="tab-panel fi" id="tab-confusion">
+          <div class="chart-card" style="max-width: 600px">
+            <h3>
+              Confusion Matrix — <span id="cm-jumlah-test">—</span> Data Testing
+            </h3>
+            <p
+              style="font-size: 13px; color: var(--ink-m); margin-bottom: 18px"
+            >
+              Baris = label aktual &nbsp;|&nbsp; Kolom = label prediksi
+            </p>
+            <div class="cm-wrap" id="cm-wrap">
+              <!-- diisi JS -->
+            </div>
+          </div>
+        </div>
+
+        <!-- Cross Validation -->
+        <div class="tab-panel fi" id="tab-cv">
+          <div class="charts-grid">
+            <div class="chart-card">
+              <h3>5-Fold Cross Validation — Akurasi</h3>
+              <div class="cv-stats">
+                <div>
+                  <div class="cv-s-num" id="cv-acc-mean">—</div>
+                  <div class="cv-s-lbl">Rata-rata akurasi</div>
+                </div>
+                <div>
+                  <div class="cv-s-num" id="cv-acc-std">—</div>
+                  <div class="cv-s-lbl">Standar deviasi</div>
+                </div>
+              </div>
+              <div class="chart-wrap"><canvas id="chartCV"></canvas></div>
+            </div>
+            <div class="chart-card">
+              <h3>5-Fold Cross Validation — F1-Score</h3>
+              <div class="cv-stats">
+                <div>
+                  <div class="cv-s-num" id="cv-f1-mean">—</div>
+                  <div class="cv-s-lbl">Rata-rata F1</div>
+                </div>
+              </div>
+              <div class="chart-wrap"><canvas id="chartCVF1"></canvas></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- CEK KALIMAT -->
+    <section id="cek-kalimat">
+      <div class="ck-wrap fi">
+        <div class="sec-tag">Cek Kalimat</div>
+        <h2>Cek Sentimen Kalimatmu</h2>
+        <p class="sec-desc">
+          Masukkan kalimat tentang investasi emas untuk mengetahui sentimennya —
+          <strong>positif</strong>, <strong>negatif</strong>, atau
+          <strong>netral</strong> — menggunakan model Naive Bayes yang sama
+          dengan halaman admin.
+        </p>
+
+        <div class="ck-form-box">
+          {% if cek_error %}
+          <div class="ck-alert">⚠️ {{ cek_error }}</div>
+          {% endif %}
+
+          <form action="/cek" method="POST" id="ckForm">
+            <span class="ck-chip-lbl"
+              >Contoh cepat — klik untuk isi otomatis</span
+            >
+            <div class="ck-chips">
+              <button type="button" class="ck-chip" onclick="ckPasteEx(this)">
+                Cuan bgt invest emas digital! 🔥 mantul rekomen banget
+              </button>
+              <button type="button" class="ck-chip" onclick="ckPasteEx(this)">
+                Rugi parah 😭 aplikasi error, duit nyangkut berkali-kali
+              </button>
+              <button type="button" class="ck-chip" onclick="ckPasteEx(this)">
+                Hmm emas digital vs reksa dana, ada plus minusnya 🤔
+              </button>
+              <button type="button" class="ck-chip" onclick="ckPasteEx(this)">
+                Tidak rugi nabung emas digital, aman dan terpercaya
+              </button>
+            </div>
+
+            <textarea
+              class="ck-textarea"
+              id="ckInput"
+              name="kalimat"
+              placeholder="Masukkan kalimat tentang investasi emas..."
+              rows="4"
+              required
+            >
+{{ cek_kalimat_input or '' }}</textarea
+            >
+
+            <div class="ck-btn-row">
+              <button type="submit" class="ck-btn">
+                <svg
+                  width="15"
+                  height="15"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2.2"
+                >
+                  <path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z" />
+                </svg>
+                Analisis Sentimen
+              </button>
+            </div>
+          </form>
+
+          {% if cek_hasil %}
+          <div class="ck-result show" id="ckResult">
+            {% if cek_kalimat_input %}
+            <div class="ck-sec-lbl">Kalimat yang dianalisis</div>
+            <div class="ck-kalimat-asli">"{{ cek_kalimat_input }}"</div>
+            {% endif %}
+
+            <div class="ck-sec-lbl">Hasil Sentimen</div>
+            <div class="ck-badge {{ cek_hasil }}">
+              {% if cek_hasil == 'positif' %}😊 Positif {% elif cek_hasil ==
+              'negatif' %}😡 Negatif {% else %}😐 Netral{% endif %}
+            </div>
+          </div>
+          {% endif %}
+        </div>
+      </div>
+    </section>
+
+    <!-- FOOTER -->
+    <footer>
+      <p>
+        <strong>Analisis Sentimen Investasi Emas Digital</strong> · Metode
+        <span class="g">Naive Bayes</span>
+      </p>
+      <p style="margin-top: 6px">Malik Abdullah · malikgtfc8@gmail.com</p>
+    </footer>
+
+    <script>
+        // ── FADE IN ───────────────────────────────────────────────────
+        const obs = new IntersectionObserver(
+          (es) =>
+            es.forEach((e) => {
+              if (e.isIntersecting) e.target.classList.add("vis");
+            }),
+          { threshold: 0.1 },
+        );
+        document.querySelectorAll(".fi").forEach((el) => obs.observe(el));
+
+        // ── TAB SWITCH ────────────────────────────────────────────────
+        function switchTab(id, btn) {
+          document
+            .querySelectorAll(".tab-btn")
+            .forEach((b) => b.classList.remove("active"));
+          document
+            .querySelectorAll(".tab-panel")
+            .forEach((p) => p.classList.remove("active"));
+          document.getElementById("tab-" + id).classList.add("active");
+          btn.classList.add("active");
+          setTimeout(animateBars, 80);
+        }
+
+        // ── METRIC BARS ───────────────────────────────────────────────
+        function animateBars() {
+          document.querySelectorAll(".m-fill").forEach((el) => {
+            el.style.width = el.dataset.w + "%";
+          });
+        }
+        setTimeout(animateBars, 700);
+
+        // ── CHARTS ────────────────────────────────────────────────
+        const GOLD = "#C9913A",
+          POS = "#1E6B3E",
+          NEG = "#B83025",
+          NEU = "#3D5A80";
+        Chart.defaults.font.family = "'DM Sans',sans-serif";
+        Chart.defaults.color = "#9A9490";
+
+        let chartKelas = null, chartBar = null, chartDonut = null,
+            chartCV = null, chartCVF1 = null;
+
+        function buildMetricBar(name, val) {
+          return `<div class="m-row">
+            <div class="m-top"><span class="m-name">${name}</span><span class="m-val">${val.toFixed(2).replace('.', ',')}%</span></div>
+            <div class="m-bar"><div class="m-fill" data-w="${val}" style="width:0"></div></div>
+          </div>`;
+        }
+
+        function buildConfusionMatrix(cmData, cmLabels, jumlahTest) {
+          // cmData = [[i, row], ...] format dari Python enumerate
+          // cmLabels = ['negatif','netral','positif'] (sorted)
+          document.getElementById('cm-jumlah-test').textContent = jumlahTest;
+          const wrap = document.getElementById('cm-wrap');
+          if (!cmData || !cmLabels) { wrap.innerHTML = '<p style="color:var(--ink-m);font-size:13px">Data confusion matrix tidak tersedia.</p>'; return; }
+
+          // Buat lookup: cm[i][j] = nilai
+          const n = cmLabels.length;
+          const mat = Array.from({length: n}, () => Array(n).fill(0));
+          cmData.forEach(([i, row]) => { row.forEach((v, j) => mat[i][j] = v); });
+
+          const maxVal = Math.max(...mat.flat());
+
+          let html = '<table class="cm-table"><thead><tr><th></th>';
+          cmLabels.forEach(lbl => { html += `<th>Pred. ${lbl.charAt(0).toUpperCase()+lbl.slice(1)}</th>`; });
+          html += '</tr></thead><tbody>';
+
+          mat.forEach((row, i) => {
+            const rowSum = row.reduce((a,b)=>a+b, 0);
+            html += `<tr><th class="side-th">Aktual ${cmLabels[i].charAt(0).toUpperCase()+cmLabels[i].slice(1)}</th>`;
+            row.forEach((v, j) => {
+              const pct = rowSum > 0 ? Math.round(v / rowSum * 100) : 0;
+              let cls = 'c-zero';
+              if (i === j) {
+                cls = v === 0 ? 'c-zero' : (v / maxVal > 0.5 ? 'c-hi' : 'c-mid');
+              } else {
+                cls = v === 0 ? 'c-zero' : 'c-lo';
+              }
+              html += `<td class="cm-cell ${cls}">${v}<span class="cm-sub">${pct}%</span></td>`;
+            });
+            html += '</tr>';
+          });
+          html += '</tbody></table>';
+          wrap.innerHTML = html;
+        }
+
+        function buildCharts(data) {
+          // Chart Kelas (Precision/Recall/F1 per label)
+          if (data.report_data && data.report_data.length) {
+            const labels = data.report_data.map(r => r.label.charAt(0).toUpperCase()+r.label.slice(1));
+            const precisions = data.report_data.map(r => r.precision / 100);
+            const recalls    = data.report_data.map(r => r.recall / 100);
+            const f1s        = data.report_data.map(r => r.f1 / 100);
+            if (chartKelas) chartKelas.destroy();
+            chartKelas = new Chart(document.getElementById('chartKelas'), {
+              type: 'bar',
+              data: {
+                labels,
+                datasets: [
+                  { label: 'Precision', data: precisions, backgroundColor: GOLD+'CC', borderRadius: 5 },
+                  { label: 'Recall',    data: recalls,    backgroundColor: NEU+'99',  borderRadius: 5 },
+                  { label: 'F1-Score',  data: f1s,        backgroundColor: POS+'99',  borderRadius: 5 },
+                ],
+              },
+              options: {
+                responsive: true, maintainAspectRatio: false,
+                plugins: { legend: { labels: { boxWidth: 11, font: { size: 12 } } } },
+                scales: {
+                  y: { min: 0, max: 1.05, grid: { color: '#EDE9E0' }, ticks: { callback: v => (v*100).toFixed(0)+'%' } },
+                  x: { grid: { display: false } },
+                },
+              },
+            });
+          }
+
+          // Chart Bar distribusi
+          const lblBar    = ['Netral', 'Positif', 'Negatif'];
+          const dataBar   = [data.netral, data.positif, data.negatif];
+          const totalDisp = data.positif + data.negatif + data.netral;
+          if (chartBar) chartBar.destroy();
+          chartBar = new Chart(document.getElementById('chartBar'), {
+            type: 'bar',
+            data: {
+              labels: lblBar,
+              datasets: [{ data: dataBar, backgroundColor: [NEU+'BB', POS+'BB', NEG+'BB'], borderRadius: 7, borderSkipped: false }],
+            },
+            options: {
+              responsive: true, maintainAspectRatio: false,
+              plugins: { legend: { display: false } },
+              scales: { y: { grid: { color: '#EDE9E0' } }, x: { grid: { display: false } } },
+            },
+          });
+
+          // Chart Donut proporsi
+          const pctPos = totalDisp > 0 ? (data.positif/totalDisp*100).toFixed(1) : 0;
+          const pctNet = totalDisp > 0 ? (data.netral/totalDisp*100).toFixed(1) : 0;
+          const pctNeg = totalDisp > 0 ? (data.negatif/totalDisp*100).toFixed(1) : 0;
+          if (chartDonut) chartDonut.destroy();
+          chartDonut = new Chart(document.getElementById('chartDonut'), {
+            type: 'doughnut',
+            data: {
+              labels: [`Netral (${pctNet}%)`, `Positif (${pctPos}%)`, `Negatif (${pctNeg}%)`],
+              datasets: [{
+                data: [data.netral, data.positif, data.negatif],
+                backgroundColor: [NEU+'BB', POS+'BB', NEG+'BB'],
+                borderWidth: 0, hoverOffset: 7,
+              }],
+            },
+            options: {
+              responsive: true, maintainAspectRatio: false, cutout: '65%',
+              plugins: { legend: { position: 'right', labels: { boxWidth: 11, font: { size: 12 } } } },
+            },
+          });
+
+          // Chart CV Akurasi
+          const cvAcc = data.cv_acc_scores && data.cv_acc_scores.length ? data.cv_acc_scores : [0,0,0,0,0];
+          const cvMean = data.cv_acc_mean || 0;
+          document.getElementById('cv-acc-mean').textContent = cvMean.toFixed(2).replace('.',',') + '%';
+          document.getElementById('cv-acc-std').textContent  = '±' + (data.cv_acc_std||0).toFixed(2).replace('.',',') + '%';
+          if (chartCV) chartCV.destroy();
+          chartCV = new Chart(document.getElementById('chartCV'), {
+            type: 'bar',
+            data: {
+              labels: cvAcc.map((_,i)=>'Fold '+(i+1)),
+              datasets: [
+                { label: 'Akurasi', data: cvAcc, backgroundColor: GOLD+'CC', borderRadius: 6 },
+                { label: 'Rata-rata', data: Array(cvAcc.length).fill(cvMean), type: 'line',
+                  borderColor: NEG, borderWidth: 1.8, borderDash: [5,4], pointRadius: 0, fill: false },
+              ],
+            },
+            options: {
+              responsive: true, maintainAspectRatio: false,
+              plugins: { legend: { labels: { boxWidth: 11, font: { size: 12 } } } },
+              scales: {
+                y: { grid: { color: '#EDE9E0' }, ticks: { callback: v => v+'%' } },
+                x: { grid: { display: false } },
+              },
+            },
+          });
+
+          // Chart CV F1
+          const cvF1   = data.cv_f1_scores && data.cv_f1_scores.length ? data.cv_f1_scores : [0,0,0,0,0];
+          const cvF1Mean = data.cv_f1_mean || 0;
+          document.getElementById('cv-f1-mean').textContent = cvF1Mean.toFixed(2).replace('.',',') + '%';
+          if (chartCVF1) chartCVF1.destroy();
+          chartCVF1 = new Chart(document.getElementById('chartCVF1'), {
+            type: 'line',
+            data: {
+              labels: cvF1.map((_,i)=>'Fold '+(i+1)),
+              datasets: [{
+                label: 'F1-Score', data: cvF1,
+                borderColor: POS, backgroundColor: POS+'22', fill: true, tension: 0.4,
+                pointBackgroundColor: POS, pointRadius: 5,
+              }],
+            },
+            options: {
+              responsive: true, maintainAspectRatio: false,
+              plugins: { legend: { labels: { boxWidth: 11, font: { size: 12 } } } },
+              scales: {
+                y: { grid: { color: '#EDE9E0' }, ticks: { callback: v => v+'%' } },
+                x: { grid: { display: false } },
+              },
+            },
+          });
+        }
+
+        // ── DEMO LOGIC ────────────────────────────────────────────────
+        let allSteps = [],
+          currentStep = -1;
+
+        function pasteEx(btn) {
+          document.getElementById("inputTeks").value = btn.textContent.trim();
+        }
+
+        async function runPredict() {
+          const teks = document.getElementById("inputTeks").value.trim();
+          if (!teks) {
+            alert("Masukkan teks terlebih dahulu.");
+            return;
+          }
+
+          // UI loading
+          document.getElementById("loader").classList.add("show");
+          document.getElementById("btnPredict").disabled = true;
+          document.getElementById("result-card").classList.remove("show");
+          document.getElementById("prep-section").classList.remove("show");
+
+          try {
+            // 1. Ambil preprocessing steps
+            const resPrep = await fetch(API_BASE + "/api/preprocess", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ teks }),
+              credentials: "same-origin",
+            });
+            const dataPrep = await resPrep.json();
+
+            // 2. Ambil prediksi
+            const resPred = await fetch(API_BASE + "/api/predict", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ teks }),
+            });
+            const dataPred = await resPred.json();
+
+            // Setup stepper
+            allSteps = dataPrep.steps;
+            currentStep = -1;
+            renderSteps();
+            document.getElementById("prep-section").classList.add("show");
+
+            // Show result
+            showResult(dataPred);
+          } catch (e) {
+            alert("Terjadi error: " + e.message);
+          } finally {
+            document.getElementById("loader").classList.remove("show");
+            document.getElementById("btnPredict").disabled = false;
+          }
+        }
+
+        const STEP_NAMES = [
+          "Konversi Emoji",
+          "Cleaning",
+          "Case Folding",
+          "Normalisasi Slang",
+          "Tokenisasi",
+          "Hapus Stopword",
+          "Stemming",
+        ];
+
+        function renderSteps() {
+          const wrap = document.getElementById("steps-wrap");
+          wrap.innerHTML = "";
+          allSteps.forEach((s, i) => {
+            const div = document.createElement("div");
+            div.className = "step-item";
+            div.id = "step-" + i;
+            div.innerHTML = `
+        <div class="step-head" onclick="toggleStep(${i})">
+          <div class="step-num">${i + 1}</div>
+          <div class="step-name">${s.nama}</div>
+          <div class="step-status" id="status-${i}">Menunggu</div>
+        </div>
+        <div class="step-body">
+          <div class="step-detail" id="detail-${i}"></div>
+          <div class="step-io" id="io-${i}"></div>
+        </div>`;
+            wrap.appendChild(div);
+          });
+          updateProgress();
+          document.getElementById("btn-next").disabled = false;
+          document.getElementById("btn-next").textContent = "Mulai Langkah 1 →";
+        }
+
+        function toggleStep(i) {
+          if (i > currentStep) return;
+          const body = document.querySelector(`#step-${i} .step-body`);
+          body.style.display = body.style.display === "none" ? "block" : "none";
+        }
+
+        function nextStep() {
+          currentStep++;
+          if (currentStep >= allSteps.length) {
+            document.getElementById("btn-next").disabled = true;
+            document.getElementById("btn-next").textContent = "Selesai ✓";
+            return;
+          }
+          // Mark previous done
+          if (currentStep > 0) {
+            const prev = document.getElementById("step-" + (currentStep - 1));
+            prev.classList.remove("active-step");
+            prev.classList.add("done");
+            document.getElementById("status-" + (currentStep - 1)).textContent =
+              "Selesai ✓";
+          }
+          // Fill current
+          const s = allSteps[currentStep];
+          const el = document.getElementById("step-" + currentStep);
+          el.classList.add("active-step");
+          document.getElementById("status-" + currentStep).textContent =
+            "Sedang diproses...";
+          document.getElementById("detail-" + currentStep).textContent = s.detail;
+
+          // IO
+          const io = document.getElementById("io-" + currentStep);
+          const inText = Array.isArray(s.input) ? s.input.join(" | ") : s.input;
+          const outText = Array.isArray(s.output)
+            ? renderTokens(s.output)
+            : s.output;
+          io.innerHTML = `
+      <div class="io-row"><span class="io-badge io-in">INPUT</span><span class="io-text">${escHtml(inText).substring(0, 200)}</span></div>
+      <div class="io-row"><span class="io-badge io-out">OUTPUT</span><span class="io-text">${s.is_list ? renderTokensHtml(s.output) : escHtml(String(s.output)).substring(0, 200)}</span></div>`;
+
+          // Scroll
+          el.scrollIntoView({ behavior: "smooth", block: "nearest" });
+
+          // Button label
+          const btnNext = document.getElementById("btn-next");
+          if (currentStep === allSteps.length - 1) {
+            btnNext.textContent = "Selesai ✓";
+            setTimeout(() => {
+              el.classList.remove("active-step");
+              el.classList.add("done");
+              document.getElementById("status-" + currentStep).textContent =
+                "Selesai ✓";
+              btnNext.disabled = true;
+            }, 300);
+          } else {
+            btnNext.textContent = `Lanjut ke Tahap ${currentStep + 2}: ${STEP_NAMES[currentStep + 1]} →`;
+          }
+          updateProgress();
+        }
+
+        function renderTokensHtml(arr) {
+          if (!arr || !arr.length)
+            return '<em style="color:var(--ink-m)">kosong</em>';
+          return (
+            '<div class="token-list">' +
+            arr.map((t) => `<span class="token">${escHtml(t)}</span>`).join("") +
+            "</div>"
+          );
+        }
+        function escHtml(s) {
+          return String(s)
+            .replace(/&/g, "&amp;")
+            .replace(/</g, "&lt;")
+            .replace(/>/g, "&gt;");
+        }
+        function updateProgress() {
+          document.getElementById("prep-progress").textContent =
+            `${Math.max(0, currentStep + 1)} / ${allSteps.length}`;
+        }
+        function resetSteps() {
+          currentStep = -1;
+          renderSteps();
+          document.getElementById("btn-next").textContent = "Mulai Langkah 1 →";
+          document.getElementById("btn-next").disabled = false;
+        }
+
+        function showResult(data) {
+          const card = document.getElementById("result-card");
+          card.classList.add("show");
+
+          // ── Kalimat asli ──
+          const inputTeks = document.getElementById("inputTeks").value.trim();
+          document.getElementById("r-input-teks").textContent = inputTeks || "-";
+
+          // ── Label utama (sama seperti admin) ──
+          const badge = document.getElementById("r-badge");
+          const icons = { positif: "😊 Positif", negatif: "😡 Negatif", netral: "😐 Netral" };
+          badge.textContent = icons[data.label] || data.label.toUpperCase();
+          badge.className = "r-badge " + data.label;
+
+          // ── Source info ──
+          const srcEl = document.getElementById("r-source");
+          if (data.source === "rule-based") {
+            srcEl.innerHTML = '<i style="margin-right:5px">📋</i>Terdeteksi oleh <strong>Rule-Based</strong> (kamus kata kunci)';
+            srcEl.className = "r-source r-source-rule";
+          } else {
+            srcEl.innerHTML = '<i style="margin-right:5px">🤖</i>Diprediksi oleh <strong>Model Naive Bayes</strong>';
+            srcEl.className = "r-source r-source-model";
+          }
+
+          // ── Probabilitas ──
+          const prob = data.probabilitas;
+          const posP = Math.round((prob.positif || 0) * 100);
+          const neuP = Math.round((prob.netral  || 0) * 100);
+          const negP = Math.round((prob.negatif || 0) * 100);
+          document.getElementById("p-pos").textContent = posP + "%";
+          document.getElementById("p-neu").textContent = neuP + "%";
+          document.getElementById("p-neg").textContent = negP + "%";
+          setTimeout(() => {
+            document.getElementById("b-pos").style.width = posP + "%";
+            document.getElementById("b-neu").style.width = neuP + "%";
+            document.getElementById("b-neg").style.width = negP + "%";
+          }, 100);
+
+          // ── Teks bersih ──
+          document.getElementById("teks-bersih").textContent = data.teks_bersih || "-";
+
+          // Scroll ke result
+          card.scrollIntoView({ behavior: "smooth", block: "nearest" });
+        }
+
+        // ── LOAD STATS DARI BACKEND ───────────────────────────────────────
+        // ── DATA DARI FLASK (dirender saat halaman dibuka) ──────────────
+        const _JINJA = {
+          model_ready   : {{ 'true' if model_ready else 'false' }},
+          akurasi       : {{ akurasi or 0 }},
+          presisi_w     : {{ presisi_w or 0 }},
+          recall_w      : {{ recall_w or 0 }},
+          f1_w          : {{ f1_w or 0 }},
+          total_data    : {{ total_data or 0 }},
+          positif       : {{ positif or 0 }},
+          negatif       : {{ negatif or 0 }},
+          netral        : {{ netral or 0 }},
+          jumlah_train  : {{ jumlah_train or 0 }},
+          jumlah_test   : {{ jumlah_test or 0 }},
+          cv_acc_scores : {{ cv_acc_scores | safe }},
+          cv_f1_scores  : {{ cv_f1_scores | safe }},
+          cv_acc_mean   : {{ cv_acc_mean or 0 }},
+          cv_acc_std    : {{ cv_acc_std or 0 }},
+          cv_f1_mean    : {{ cv_f1_mean or 0 }},
+          cm_data       : {{ cm_data | tojson | safe if cm_data else 'null' }},
+          cm_labels     : {{ cm_labels | tojson | safe if cm_labels else 'null' }},
+          report_data   : {{ report_data | tojson | safe if report_data else 'null' }},
+        };
+
+        function initViz(data) {
+          // ── Hero pills ──
+          if (data.total_data)
+            document.getElementById("stat-total").textContent =
+              data.total_data.toLocaleString("id-ID");
+          if (data.akurasi)
+            document.getElementById("stat-akurasi").textContent =
+              data.akurasi.toFixed(2) + "%";
+          if (data.jumlah_train)
+            document.getElementById("stat-train").textContent =
+              data.jumlah_train.toLocaleString("id-ID");
+          if (data.total_data)
+            document.getElementById("viz-total").textContent =
+              data.total_data.toLocaleString("id-ID");
+
+          document.getElementById("viz-loading").style.display = "none";
+
+          const hasResult = data.model_ready
+            || data.akurasi > 0
+            || (data.cm_data && data.cm_data.length > 0)
+            || (data.report_data && data.report_data.length > 0);
+
+          if (!hasResult) {
+            document.getElementById("viz-empty").style.display = "block";
+            return;
+          }
+
+          document.getElementById("viz-content").style.display = "block";
+
+          // ── Metric bars ──
+          const ml = document.getElementById("metrics-list");
+          ml.innerHTML = [
+            buildMetricBar("Akurasi",             data.akurasi  || 0),
+            buildMetricBar("Presisi (weighted)",  data.presisi_w || 0),
+            buildMetricBar("Recall (weighted)",   data.recall_w  || 0),
+            buildMetricBar("F1-Score (weighted)", data.f1_w      || 0),
+          ].join("");
+          setTimeout(animateBars, 300);
+
+          buildConfusionMatrix(data.cm_data, data.cm_labels, data.jumlah_test || "—");
+          buildCharts(data);
+        }
+
+        // Jalankan langsung dari data Jinja — tidak perlu fetch
+        initViz(_JINJA);
+
+        // Tetap fetch /api/stats untuk update hero pills (opsional, silent fallback)
+        fetch("/api/stats").then(r=>r.json()).then(d=>{
+          if (d.total_data) document.getElementById("stat-total").textContent = d.total_data.toLocaleString("id-ID");
+          if (d.akurasi)    document.getElementById("stat-akurasi").textContent = d.akurasi.toFixed(2) + "%";
+          if (d.jumlah_train) document.getElementById("stat-train").textContent = d.jumlah_train.toLocaleString("id-ID");
+        }).catch(()=>{});
+        // ── CEK KALIMAT ───────────────────────────────────────────────
+        function ckPasteEx(btn) {
+          document.getElementById("ckInput").value = btn.textContent.trim();
+          document.getElementById("ckInput").focus();
+        }
+
+        // Auto-scroll ke hasil setelah form submit
+        window.addEventListener('DOMContentLoaded', function() {
+          const hasil = document.getElementById("ckResult");
+          if (hasil && hasil.classList.contains("show")) {
+            setTimeout(() => hasil.scrollIntoView({ behavior: "smooth", block: "center" }), 300);
+          }
+        });
+
+        // Ctrl+Enter / Cmd+Enter submit form
+        const ckInput = document.getElementById("ckInput");
+        if (ckInput) {
+          ckInput.addEventListener("keydown", function(e) {
+            if (e.key === "Enter" && (e.ctrlKey || e.metaKey)) {
+              document.getElementById("ckForm").submit();
+            }
+          });
+        }
+    </script>
+  </body>
+</html>
