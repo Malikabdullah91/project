@@ -1,4 +1,4 @@
-﻿flask
+flask
 flask_sqlalchemy
 flask-cors
 pandas
