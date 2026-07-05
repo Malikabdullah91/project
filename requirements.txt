@@ -1,8 +1,11 @@
-flask
+﻿flask
 flask_sqlalchemy
+flask-cors
 pandas
 scikit-learn
 numpy
 Sastrawi
 pymysql
 werkzeug
+emoji
+nlp-id
